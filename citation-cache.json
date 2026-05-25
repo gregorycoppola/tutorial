@@ -88,5 +88,15 @@
     "status": "verified",
     "arxiv_id": "2301.13379",
     "title": "Looped Transformers as Programmable Computers"
+  },
+  "agarwal2025gradient": {
+    "status": "verified",
+    "arxiv_id": "2512.22473",
+    "title": "Gradient Dynamics of Attention: How Cross-Entropy Sculpts Bayesian Manifolds"
+  },
+  "agarwal2025geometric": {
+    "status": "verified",
+    "arxiv_id": "2512.23752",
+    "title": "Geometric Scaling of Bayesian Inference in LLMs"
   }
 }
