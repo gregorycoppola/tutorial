@@ -1,61 +1,99 @@
 \section{The Residual Stream vs.\ Propositions: Superposition and the $D_{ff}/D$ Ratio}
 \label{sec:superposition}
 
-The formal BP construction uses $D_{\mathrm{model}} = 8$ with one dedicated
-dimension per proposition and one OR gate per belief update. A production transformer
-has $D_{\mathrm{model}} = 4096$ and $D_{ff} = 14{,}336$: approximately 3.5 OR gates
-per residual stream dimension per layer. Why the mismatch?
+The formal BP construction uses $D_{\mathrm{model}} = 8$ with one dedicated dimension per
+proposition and one OR gate per belief update. A production transformer has $D_{\mathrm{model}}
+= 4096$ and $D_{ff} = 14{,}336$: approximately 3.5 OR gates per residual stream dimension per
+layer. This raises two related questions. Why does the ratio $D_{ff}/D$ exceed 1 at all? And
+does $D_{ff} \approx 14{,}336$ mean there are 14,336 factor nodes per layer? This section
+resolves both.
 
-This section resolves the tension. The formal construction is the minimal case.
-Production models generalize it in three ways that each require more hidden units.
+\subsection*{Hidden Units Are Not Factor Nodes}
 
-\subsection*{Superposition}
+In the minimal construction, one FFN hidden unit implements one factor node --- one
+conditional relationship between two propositions. Hidden units and factor nodes are in
+one-to-one correspondence.
 
-Elhage et al.~\cite{elhage2022superposition} show that transformer residual streams
-represent far more features than $D_{\mathrm{model}}$ dimensions via superposition.
-Features are encoded as nearly-orthogonal directions in a high-dimensional space,
-with interference managed by sparsity. A model with $D = 4096$ may be tracking tens
-of thousands of distinct concepts simultaneously, each encoded as a direction rather
-than a dedicated dimension.
+In a production transformer, this correspondence breaks down in two ways:
 
-In BP terms, superposition means the residual stream is simultaneously tracking many
-factor graph nodes. Each node's belief is encoded as a scalar projection onto a
-feature direction, not as a dedicated coordinate. When multiple nodes are active at
-once, their representations superpose --- they coexist in the same high-dimensional
-vector with manageable interference.
+\begin{enumerate}
+\item \textbf{Multiple units per factor.} A single conditional relationship may require
+multiple hidden units to represent accurately with non-sigmoid activations. ReLU and SwiGLU
+require more units to approximate the exact log-odds combination that sigmoid implements in
+one unit. The factor node is still the unit of semantics; the hidden units are the
+implementation substrate.
 
-More superposed nodes require more OR gates to update them simultaneously. If the
-residual stream tracks $K$ active concepts per token and each needs an independent
-belief update per layer, then $D_{ff}$ must be at least $K$. The ratio
-$D_{ff} / D \approx 3$--$4$ across Llama, GPT, and other families reflects the
-empirical superposition density: each dimension participates in roughly 3--4 active
-features at any given time.
+\item \textbf{Superposed factors.} Because the residual stream represents many concepts via
+superposition, a single hidden unit may participate in multiple factor relationships
+simultaneously. The unit fires for a direction in residual stream space that is a
+superposition of several feature directions, and the contribution it writes is a superposition
+of several belief updates.
+\end{enumerate}
 
-\subsection*{$k$-Ary Neighbors}
+The right level of abstraction is not hidden units but \emph{SAE features}. Each monosemantic
+SAE feature corresponds to one factor node in the implicit factor graph. The number of
+semantically distinct factor nodes per layer is the number of active SAE features --- typically
+much smaller than $D_{ff}$.
 
-The formal construction handles pairwise factors: each OR gate takes exactly two
-inputs. Real knowledge graph nodes have more than two neighbors. The scaling theorem
-of~\cite{coppola2026transformers} handles this: any $k$-ary factor graph binarizes
-exactly via a chain of $\lceil \log_2 k \rceil$ pairwise updates. More neighbors
-require more hidden units to chain the updates.
+$D_{ff}$ is therefore the \emph{implementation budget} for the OR gates, not the factor node
+count. It sets an upper bound on representable conditional relationships per layer, but the
+actual semantic content is determined by the SAE feature structure.
 
-\subsection*{Activation Precision}
+\subsection*{Three Reasons the Budget Exceeds One}
 
-Sigmoid activation implements the log-odds algebra exactly. ReLU and SwiGLU are
-compatible but not exact: they preserve non-negativity but require more hidden units
-to achieve the same approximation quality. Production models use SwiGLU
-(Llama) or GELU (GPT), which need a larger $D_{ff}$ to match the accuracy of the
-exact sigmoid construction.
+Three independent factors drive $D_{ff}/D$ above the minimal value of 1:
 
-\subsection*{The Ratio $D_{ff}/D \approx 3$--$4$}
+\textbf{Superposition.} Elhage et al.~\cite{elhage2022superposition} show that residual
+streams represent far more features than $D_{\mathrm{model}}$ dimensions via superposition:
+features are encoded as nearly-orthogonal directions in a high-dimensional space, with
+interference managed by sparsity. A model with $D = 4096$ may track tens of thousands of
+distinct concepts simultaneously. If the residual stream tracks $K$ active concepts per token
+and each needs an independent belief update per layer, $D_{ff}$ must be at least $K$. Since
+$K \gg D$, the OR budget must exceed the residual stream dimension by the superposition
+density --- empirically, roughly $3$--$4\times$.
 
-This ratio is an architectural constant, not an accident. It encodes the combined
-effect of the three factors above. The minimal formal construction has
-$D_{ff}/D = 1$. Production models need $D_{ff}/D \approx 3$--$4$ to handle
-superposition, $k$-ary neighbors, and non-sigmoid activations simultaneously.
+\textbf{$k$-Ary neighbors.} The formal construction handles pairwise factors: each OR gate
+takes exactly two inputs. Real knowledge graph nodes have more than two neighbors. The scaling
+theorem of~\cite{coppola2026transformers} handles this: any $k$-ary factor graph binarizes
+exactly via a chain of $\lceil \log_2 k \rceil$ pairwise updates. A node with 8 neighbors
+requires 3 chained pairwise updates rather than 1, contributing a further multiplicative
+overhead to the required $D_{ff}$.
 
-The ratio is also why the OR evaluations dominate the AND evaluations so completely.
-With $D_{ff}/H \approx 416$ for Llama~3 405B, the vast majority of compute is
-spent on inference (updating beliefs) rather than routing (finding neighbors). This
-is the correct allocation for a system whose primary task is combining evidence from
-many sources into coherent conclusions.
+\textbf{Activation precision.} Sigmoid implements the log-odds algebra exactly. ReLU and
+SwiGLU are compatible but not exact: they preserve non-negativity and smooth aggregation but
+require more hidden units to achieve the same approximation quality. The bayes-learner
+experiment confirms that gradient descent finds approximately correct BP solutions even with
+non-sigmoid activations (val MAE 0.000752), but at the cost of additional hidden units per
+factor.
+
+Together these three factors explain why the minimal $D_{ff}/D = 1$ becomes $3$--$4$ in
+production models. The ratio is an architectural constant encoding the combined implementation
+overhead of superposition density, neighbor fanout, and activation imprecision.
+
+\subsection*{The Dimension Budget and Factor Graph Scale}
+
+A cleaner way to think about the implicit factor graph uses the dimension budget directly.
+The residual stream has $D_{\mathrm{model}}$ dimensions. Each active concept occupies a
+direction in this space. Empirically, roughly $10 \times D_{\mathrm{model}}$ features can be
+superposed with manageable interference~\cite{elhage2022superposition}.
+
+For Llama~3 405B with $D_{\mathrm{model}} = 16{,}384$, this gives roughly 160,000
+simultaneously active features per token position. Each feature is a factor graph node. The
+factor graph has on the order of $W \times 160{,}000 \approx 1.3\mathrm{B}$ nodes for a
+sequence of length 8192. This is the scale of the implicit Bayesian network that one forward
+pass of Llama~3 405B is performing inference over.
+
+\subsection*{The OR/AND Asymmetry}
+
+With this clarification, the $D_{ff}/H \approx 416$ ratio for Llama~3 405B has a clean
+interpretation. It is not that there are 416 OR gates for every AND gate. It is that the OR
+implementation requires 416 units of hidden dimension for every unit of attention head
+dimension. The factor graph itself may be much sparser --- each node may have only 2--5
+neighbors in practice --- but implementing those sparse connections accurately in the
+superposed representation requires the $416\times$ overhead.
+
+The implication for interpretability: finding the factor graph requires working at the SAE
+feature level, not the hidden unit level. The factor potentials are encoded in the relationship
+between input SAE features (what the $W_1$ rows respond to) and output SAE features (what the
+$W_2$ columns write). The $D_{ff}$ hidden units are the implementation substrate; the SAE
+features are the semantics.
