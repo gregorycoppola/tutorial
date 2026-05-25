@@ -4,30 +4,23 @@
 \usepackage{hyperref}
 \usepackage{microtype}
 \usepackage{booktabs}
-
 \geometry{margin=1.2in}
-
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{corollary}[theorem]{Corollary}
 \newtheorem{lemma}[theorem]{Lemma}
 \newtheorem{definition}[theorem]{Definition}
 \newtheorem{remark}[theorem]{Remark}
-
 \DeclareMathOperator{\logit}{logit}
 \newcommand{\updateBelief}{\mathrm{updateBelief}}
 \newcommand{\R}{\mathbb{R}}
-
 \title{Finding the Bayes Net in the Transformer:\\
 A Tutorial on Message Passing, Belief Propagation,
 and Transformer Circuits}
 \author{Greg Coppola\\
 \small coppola.ai \quad greg@coppola.ai}
 \date{2026}
-
 \begin{document}
-
 \maketitle
-
 \begin{abstract}
 A sigmoid transformer can exactly realize belief propagation
 computations. This is not a loose analogy or a high-level
@@ -37,7 +30,6 @@ forward pass implements the BP update equations directly. This paper
 is a tutorial guide to what that result means, how it connects to
 transformer components, and what it implies for understanding trained
 models.
-
 We walk through the transformer architecture component by component:
 residual streams as evolving belief states, attention as evidence
 routing, feed-forward networks as belief updates, and layers as
@@ -47,42 +39,32 @@ three --- and show that five independent research programs in graphical
 models, mechanistic interpretability, in-context learning, graph
 neural networks, and constructive weight proofs have converged on the
 same picture from different starting points.
-
 The companion paper~\cite{coppola2026transformers} develops the formal
 constructive theorems. This paper is the conceptual and mechanistic
 guide to the broader picture those theorems open up.
 \end{abstract}
-
 \tableofcontents
 \newpage
-
 \part{The Mathematical Foundation}
 \input{ch00-introduction}
 \input{ch10-log-odds-algebra}
 \input{ch03b-turing-complete}
-
 \part{The Five Correspondences}
 \input{ch01-residual-stream}
 \input{ch02-attention-and-gate}
 \input{ch03-ffn-or-gate}
 \input{ch04-layers-rounds-of-bp}
 \input{ch05-scaling-numbers}
-
 \part{Going Deeper}
 \input{ch06-residual-stream-vs-propositions}
 \input{ch08-three-softmaxes}
-\input{ch12-or-nodes-vs-dimensions}
 \input{ch11-how-to-read-weights}
 \input{ch07c-hybrid-bp}
-
 \part{Grounding and Hallucination}
 \input{ch09-grounded-vs-ungrounded}
-
 \part{Convergent Evidence}
 \input{ch07-evidence-from-interp}
 \input{ch13-related-work}
-
 \bibliographystyle{plain}
 \bibliography{refs}
-
 \end{document}
