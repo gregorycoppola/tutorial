@@ -1,0 +1,116 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{parskip}
+\usepackage{amsmath,amssymb}
+\usepackage{titlesec}
+\usepackage{booktabs}
+
+\title{\textbf{Seeing the Bayes Net in the Transformer: A Tutorial}}
+\author{Greg Coppola\\coppola.ai\\greg@coppola.ai}
+\date{2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The shannon paper (arXiv:2603.17063) proved formally that a sigmoid transformer is a
+Bayesian network --- not approximately, not analogically, but architecturally, for any
+weights, Lean-verified. This tutorial asks the follow-up question: can you actually
+\emph{see} the Bayes net when you look at a real trained transformer? Can you point at
+specific weights, heads, and layers and say --- that is the AND gate, that is the OR
+gate, that is the factor potential?
+
+We argue the answer is yes. We walk through five correspondences between the transformer
+architecture and belief propagation on a factor graph: the residual stream as the belief
+state, attention as the gather step (AND), the FFN as the update step (OR), layers as
+rounds of BP, and the scaling numbers as a Bayes net inventory. We address the
+dimensionality question --- why $D_{ff} \approx 3$--$4 \times D$ --- via superposition,
+$k$-ary neighbors, and activation precision. We survey the mechanistic interpretability
+literature and show that every major finding (induction heads, key-value memories, ROME,
+SAE features, attribution graphs) maps naturally onto a component of the BP account.
+Five independent research programs have converged on this answer. This tutorial explains
+what the answer means.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+% TODO: full introduction prose
+% Key points: the shannon result, the tutorial question, preview of five correspondences,
+% the convergence story, tone setting.
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\section{Background: Factor Graphs and Belief Propagation}
+% TODO: self-contained BP intro
+% Covers: variable nodes, factor nodes, joint distribution, gather-update algorithm,
+% updateBelief formula, convergence on trees, loopy approximation.
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\section{Background: The Transformer}
+% TODO: minimal transformer account in BP framing
+% Covers: residual stream, attention, FFN, five dimensions (W, D, H, D_ff, L),
+% routing view (Elhage 2021).
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\section{The Log-Odds Algebra}
+% TODO: Turing-Good-Pearl unification
+% Covers: logit/sigmoid isomorphism, the algebra on (0,1), three independent derivations,
+% why sigmoid is the right activation, relation to Boolean logic.
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\section{The Five Correspondences}
+
+\subsection{The Residual Stream as the Belief State}
+% TODO
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\subsection{Attention as the Gather Step (AND)}
+% TODO
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\subsection{The FFN as the Update Step (OR)}
+% TODO
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\subsection{Layers as Rounds of BP}
+% TODO
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\subsection{The Scaling Numbers as a Bayes Net Inventory}
+% TODO
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\section{The Dimensionality Question: $D_{ff}$, Superposition, and Multiple OR Gates}
+% TODO: the D_ff/D ratio, why it is 3-4x, three mechanisms
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\section{Evidence from Mechanistic Interpretability}
+% TODO: each finding + BP interpretation
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\section{The Three Softmaxes}
+% TODO: routing vs inference vs generation
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\section{Grounded vs.\ Ungrounded Transformers}
+% TODO: grounding, hallucination in BP terms, RAG as partial grounding
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\section{Open Questions}
+% TODO: diffuse attention, weight inspection experiment, grounding gap
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\section{Related Work}
+% TODO: five clusters, convergence table
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\section{Conclusion}
+% TODO
+\textit{[Section to be written. See index.tex for content summary.]}
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}

@@ -1,0 +1,61 @@
+\section{The Residual Stream vs.\ Propositions: Superposition and the $D_{ff}/D$ Ratio}
+\label{sec:superposition}
+
+The formal BP construction uses $D_{\mathrm{model}} = 8$ with one dedicated
+dimension per proposition and one OR gate per belief update. A production transformer
+has $D_{\mathrm{model}} = 4096$ and $D_{ff} = 14{,}336$: approximately 3.5 OR gates
+per residual stream dimension per layer. Why the mismatch?
+
+This section resolves the tension. The formal construction is the minimal case.
+Production models generalize it in three ways that each require more hidden units.
+
+\subsection*{Superposition}
+
+Elhage et al.~\cite{elhage2022superposition} show that transformer residual streams
+represent far more features than $D_{\mathrm{model}}$ dimensions via superposition.
+Features are encoded as nearly-orthogonal directions in a high-dimensional space,
+with interference managed by sparsity. A model with $D = 4096$ may be tracking tens
+of thousands of distinct concepts simultaneously, each encoded as a direction rather
+than a dedicated dimension.
+
+In BP terms, superposition means the residual stream is simultaneously tracking many
+factor graph nodes. Each node's belief is encoded as a scalar projection onto a
+feature direction, not as a dedicated coordinate. When multiple nodes are active at
+once, their representations superpose --- they coexist in the same high-dimensional
+vector with manageable interference.
+
+More superposed nodes require more OR gates to update them simultaneously. If the
+residual stream tracks $K$ active concepts per token and each needs an independent
+belief update per layer, then $D_{ff}$ must be at least $K$. The ratio
+$D_{ff} / D \approx 3$--$4$ across Llama, GPT, and other families reflects the
+empirical superposition density: each dimension participates in roughly 3--4 active
+features at any given time.
+
+\subsection*{$k$-Ary Neighbors}
+
+The formal construction handles pairwise factors: each OR gate takes exactly two
+inputs. Real knowledge graph nodes have more than two neighbors. The scaling theorem
+of~\cite{coppola2026transformers} handles this: any $k$-ary factor graph binarizes
+exactly via a chain of $\lceil \log_2 k \rceil$ pairwise updates. More neighbors
+require more hidden units to chain the updates.
+
+\subsection*{Activation Precision}
+
+Sigmoid activation implements the log-odds algebra exactly. ReLU and SwiGLU are
+compatible but not exact: they preserve non-negativity but require more hidden units
+to achieve the same approximation quality. Production models use SwiGLU
+(Llama) or GELU (GPT), which need a larger $D_{ff}$ to match the accuracy of the
+exact sigmoid construction.
+
+\subsection*{The Ratio $D_{ff}/D \approx 3$--$4$}
+
+This ratio is an architectural constant, not an accident. It encodes the combined
+effect of the three factors above. The minimal formal construction has
+$D_{ff}/D = 1$. Production models need $D_{ff}/D \approx 3$--$4$ to handle
+superposition, $k$-ary neighbors, and non-sigmoid activations simultaneously.
+
+The ratio is also why the OR evaluations dominate the AND evaluations so completely.
+With $D_{ff}/H \approx 416$ for Llama~3 405B, the vast majority of compute is
+spent on inference (updating beliefs) rather than routing (finding neighbors). This
+is the correct allocation for a system whose primary task is combining evidence from
+many sources into coherent conclusions.

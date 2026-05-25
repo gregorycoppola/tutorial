@@ -1,0 +1,69 @@
+\section{The Scaling Numbers as a Bayes Net Inventory}
+\label{sec:scaling-numbers}
+
+The five architectural dimensions of a transformer --- $W$ (sequence length),
+$D_{\mathrm{model}}$ (embedding dimension), $H$ (attention heads), $D_{ff}$ (FFN
+hidden dimension), $L$ (layers) --- are not arbitrary engineering choices. In the
+Bayes net view, each dimension has a precise interpretation, and together they
+constitute an inventory of the implicit factor graph.
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Dimension & BP interpretation & Llama~3 405B \\
+\midrule
+$W$ & nodes in the factor graph (sequence positions) & 8{,}192 \\
+$L$ & rounds of belief propagation & 126 \\
+$H$ & AND patterns per layer & 128 \\
+$D_{ff}$ & OR patterns per layer & 53{,}248 \\
+$L \times H$ & distinct AND weight patterns & 16{,}128 \\
+$L \times D_{ff}$ & distinct OR weight patterns & 6.7M \\
+$L \times H \times W$ & AND evaluations per forward pass & 132M \\
+$L \times D_{ff} \times W$ & OR evaluations per forward pass & 55B \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The ratio $D_{ff} / H \approx 416$ for Llama~3 405B. The architecture devotes
+$416\times$ more capacity to inference (OR gates) than to routing (AND gates).
+This is the right ratio for a system whose bottleneck is combining evidence, not
+finding it.
+
+\subsection*{What Scaling Adds}
+
+When a model scales from 8B to 405B parameters, what changes in Bayes net terms?
+
+\begin{itemize}
+\item \textbf{More rounds of BP} ($L$ increases): deeper reasoning chains become
+possible. A 126-layer model can follow implications 126 hops deep.
+
+\item \textbf{Richer OR patterns} ($D_{ff}$ increases): more conditional probability
+table entries per layer. The model can represent more fine-grained conditional
+relationships.
+
+\item \textbf{More nodes} ($W$ increases): longer sequences mean larger factor
+graphs. The model reasons over more propositions simultaneously.
+
+\item \textbf{AND patterns stay small} ($H$ grows slowly): 128 heads in 405B vs.\
+16 in the smallest models. The number of distinct routing operations is nearly
+constant. What scales is inference capacity, not routing capacity.
+\end{itemize}
+
+The implication is sharp: scaling adds inference depth and richness, not
+fundamentally new reasoning structure. The AND/OR architecture is fixed. What
+changes is how many rounds it runs and how many patterns it can match.
+
+\subsection*{The 16,128 Number}
+
+The 16,128 distinct AND weight patterns for Llama~3 405B is a striking number
+because it is so small. Every token position in every sequence uses one of these
+16,128 routing patterns --- the same patterns, regardless of what the token is.
+The routing key (which neighbor to attend to) is determined by the weight matrices,
+which are shared across positions. What varies across positions is the continuous
+content of the residual stream, not the routing structure.
+
+This is the formal statement of weight sharing as universal rule implementation
+(Section~4.3 of~\cite{coppola2026transformers}): the same computation runs for every
+instantiation of a concept, and the particular input supplies the magnitudes. The
+16,128 patterns are the universal rules. The residual stream values are the
+particular instances.

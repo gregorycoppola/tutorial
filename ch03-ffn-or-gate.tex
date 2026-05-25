@@ -1,0 +1,94 @@
+\section{The FFN as Belief Update}
+\label{sec:ffn-or}
+
+Once attention has assembled the relevant evidence into the residual
+stream, the feed-forward network performs the update step. In the exact
+constructive setting, this update is the binary belief-propagation rule
+for combining independent evidence sources.
+
+The central formula is:
+\[
+\updateBelief(m_0, m_1)
+  = \frac{m_0 m_1}{m_0 m_1 + (1-m_0)(1-m_1)}
+  = \sigma\!\left(\logit(m_0) + \logit(m_1)\right).
+\]
+With sigmoid activation and BP weights ($w_0 = w_1 = 1$, $b = 0$), the
+FFN computes this exactly from the gathered beliefs in dimensions~4
+and~5, writing the result to dimension~0. This is the Bayesian update
+rule for two independent binary evidence sources in the constructive
+model~\cite{coppola2026transformers}.
+
+\subsection*{The Boolean Structure Inside the Update}
+
+The formula contains the same structure that appears in classical
+Boolean reasoning, but in probabilistic form. The term $m_0 m_1$ is the
+joint probability that both independent inputs are true. In log-odds
+space, this multiplication becomes addition:
+\[
+\logit(\updateBelief(m_0, m_1)) = \logit(m_0) + \logit(m_1).
+\]
+
+Independent evidence adds. The sigmoid converts the log-odds sum back to
+probability space. The FFN is therefore a weight-of-evidence combiner in
+the sense of Turing and Good~\cite{good1950probability}, when its inputs
+and weights instantiate the constructive BP representation.
+
+This is why the OR-gate language is useful: the FFN combines gathered
+evidence into an updated conclusion. But the exact theorem is more
+specific than the metaphor. The FFN implements the BP update exactly in
+the sigmoid construction; production FFNs approximate or generalize this
+role rather than literally instantiating the same binary rule in every
+unit.
+
+\subsection*{The Key-Value Memory Interpretation}
+
+Geva et al.~\cite{geva2021ffn} show that FFN layers can be viewed as
+key-value memories: the rows of $W_1$ are keys that detect input
+patterns, and the columns of $W_2$ are values written to the residual
+stream when those patterns activate. Each hidden unit detects a pattern
+and contributes an update.
+
+In the BP interpretation, these key-value memories resemble learned
+factor potentials. The key determines when an update is relevant; the
+value determines what direction is written back into the residual
+stream. The full FFN layer integrates many such updates into the token's
+next residual-stream state.
+
+ROME~\cite{meng2022rome} provides suggestive evidence for this
+interpretation: editing localized FFN parameters can change factual
+associations in targeted ways. This does not by itself prove that FFN
+weights are literal conditional-probability tables, but it is consistent
+with the view that FFNs store semantically structured update directions.
+
+\subsection*{Sigmoid vs.\ ReLU}
+
+The formal proof requires sigmoid activation because $\updateBelief$ is
+exactly $\sigma(\logit(m_0) + \logit(m_1))$: sigmoid is the inverse of
+logit, and the composition gives the desired update. ReLU, GeLU, and
+SwiGLU do not implement this binary log-odds algebra exactly.
+
+Nevertheless, these activations may still support approximate or
+generalized message-passing behavior. They preserve smooth, structured
+transformations of residual-stream features, and empirical experiments
+show that gradient descent can find approximately correct BP-like
+solutions even with ReLU activations. In the \texttt{bayes-learner}
+experiment, for example, the learned model reached validation MAE
+$0.000752$~\cite{coppola2026transformers}.
+
+Thus sigmoid gives the exact algebraic identity. Modern activations give
+a practical approximation or extension, not the same formal guarantee.
+
+\subsection*{Scaling}
+
+For Llama~3 405B, there are
+$L \times D_{ff} = 126 \times 53{,}248 \approx 6.7\mathrm{M}$
+FFN hidden units across layers. The number of FFN evaluations per
+forward pass is
+$L \times D_{ff} \times W \approx 55\mathrm{B}$ at sequence length
+$W = 8192$.
+
+Within the BP interpretation, this large FFN budget reflects the cost of
+implementing rich update rules over many superposed features. The
+architecture devotes far more capacity to updating internal state than
+to routing attention alone, which is consistent with the view that
+inference is the dominant computational burden.

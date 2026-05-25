@@ -1,0 +1,81 @@
+\section{Layers Are Rounds of Belief Propagation}
+\label{sec:layers-rounds}
+
+One transformer layer is one round of belief propagation. $L$ layers are $L$ rounds.
+This is the content of Theorem~1.1 in~\cite{coppola2026transformers}, and it is the
+claim that ties the previous three sections together.
+
+A single round of BP proceeds in two steps. In the gather step, each variable node
+copies its neighbors' current beliefs into scratch slots. In the update step, each
+variable node computes a new belief from the gathered evidence. One transformer
+layer does exactly this: attention is the gather step, the FFN is the update step,
+and the strict alternation is architecturally enforced. The depth of the network is
+not an engineering hyperparameter --- it is determined by the number of reasoning
+hops required.
+
+\subsection*{The Peirce Lower Bound}
+
+No local algorithm can solve $N$-hop reasoning in fewer than $N$ rounds. This is
+the Peirce lower bound, and it applies directly to belief propagation: on a tree of
+diameter $d$, BP requires exactly $d$ rounds to propagate evidence from one end to
+the other~\cite{pearl1988probabilistic}. A transformer with $L$ layers can perform
+at most $L$ hops of reasoning. More layers are required for longer reasoning chains,
+not for more parameters per se.
+
+This reframes the question of why large models need depth. It is not that deeper
+models have more capacity in a vague sense. It is that deeper models can perform
+more rounds of inference --- they can follow longer chains of implication. A model
+that needs to conclude $A \Rightarrow B \Rightarrow C \Rightarrow D$ needs at least
+three layers, regardless of how wide each layer is.
+
+\subsection*{Three-Phase Layer Structure}
+
+Experiments classifying attention heads in GPT-2 small by behavior reveal a
+three-phase structure across layers:
+
+\begin{itemize}
+\item \textbf{Layers 0--2 (continuous-heavy):} local feature extraction. Attention
+heads attend to nearby tokens; the residual stream accumulates basic syntactic and
+semantic features. This is the first round of BP: each node gathers information
+from its immediate neighbors.
+
+\item \textbf{Layer 3 (transition):} a shift in the dominant computation. Hub heads
+begin to dominate. The BOS token starts accumulating a global context representation.
+
+\item \textbf{Layers 4--11 (hub-dominated):} global context assembly. Hub heads
+distribute the BOS representation to every token. This is iterative refinement of
+a global prior --- each round incorporates the accumulated evidence from all previous
+rounds.
+\end{itemize}
+
+The semantic-AND heads do not scale in number: 9 in GPT-2 small, 9 in GPT-2 medium.
+What scales is communication infrastructure (hub heads), not logical reasoning
+capacity per layer. This is consistent with the BP view: the number of reasoning
+steps is set by depth, not width.
+
+\subsection*{Residual Connections as Belief Accumulation}
+
+The residual connection has a natural interpretation in this account. Each layer
+adds its update to the accumulated belief, rather than replacing it. This is exactly
+the structure of iterative BP: each round refines the beliefs from the previous
+round. The residual stream after $l$ layers encodes the belief state after $l$ rounds
+of message passing.
+
+Without residual connections, each layer would compute its output from scratch and
+the iterative refinement interpretation would break down. With residual connections,
+the stream has a well-defined semantic content at every depth: it is the belief state
+of the implicit factor graph after that many rounds of BP.
+
+\subsection*{Convergence}
+
+On tree-structured factor graphs, BP converges in exactly $\mathrm{diameter}(T)$
+rounds and the resulting beliefs are the exact marginal posteriors. This is the
+no-hallucination corollary of~\cite{coppola2026transformers}: a transformer with BP
+weights, run for sufficiently many layers over a grounded tree-structured knowledge
+base, computes exact Bayesian posteriors at every node.
+
+On loopy graphs, BP may not converge, but in practice it does on the graph structures
+that arise in typical knowledge bases. The \texttt{loopy} repository reports 100\%
+convergence across 500 trials on five loopy graph structures, with mean KL divergence
+below $0.0002$~\cite{coppola2026transformers}. The theoretical gap between trees and
+loopy graphs is smaller in practice than in the worst case.

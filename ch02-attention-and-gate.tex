@@ -1,0 +1,95 @@
+\section{Attention as Evidence Gathering}
+\label{sec:attention-and}
+
+Within the BP interpretation, the attention mechanism performs the
+gather phase of message passing: it routes neighboring beliefs into the
+residual stream before the update step executes. This corresponds to the
+evidence-gathering phase of Pearl's sum-product
+algorithm~\cite{pearl1988probabilistic}.
+
+The conjunctive structure is architectural rather than localized inside
+any individual attention head. Consider a single transformer layer. Each
+attention head scans token positions, concentrates on a relevant
+neighbor, and copies information from that neighbor into a designated
+region of the current token's residual stream. Only after all heads have
+finished does the feed-forward network execute.
+
+The conjunction is therefore not inside any one head. It emerges at the
+level of the residual stream, where multiple required evidence sources
+become simultaneously available in a shared workspace before the update
+step runs. The FFN has no mechanism to execute on partial information:
+it reads the entire residual stream state. In this sense, the
+architecture enforces a gather-before-update semantics analogous to
+conjunctive evidence integration.
+
+\subsection*{The Formal Weight Construction}
+
+The constructive mapping from
+\cite{coppola2026transformers} realizes the gather step exactly. Each
+attention head uses two sparse weight families:
+
+\begin{itemize}
+\item $\mathrm{projectDim}(d)$: a diagonal projection extracting
+dimension $d$. Used as $W_Q$ and $W_K$. The resulting $Q \cdot K$ dot
+product peaks when token $k$'s stored index matches token $j$'s query
+value, implementing exact index matching.
+
+\item $\mathrm{crossProject}(s, d)$: an off-diagonal projection reading
+source dimension $s$ and writing to destination dimension $d$. Used as
+$W_V$. Routes neighbor $k$'s belief from one residual-stream dimension
+into another.
+\end{itemize}
+
+At sufficiently high temperature, the softmax concentrates almost
+entirely on the matching neighbor. In the constructive setting, sharp
+attention behaves like a routing or lookup operation rather than an
+inference computation. The probabilistic update occurs in the FFN stage.
+
+\subsection*{A Concrete Example}
+
+Consider three propositions:
+\texttt{like(jack,jill)} with belief $m_0 = 0.8$,
+\texttt{like(jill,jack)} with belief $m_1 = 0.4$, and
+\texttt{date(jack,jill)} whose belief is to be updated.
+
+Head~0 attends to \texttt{like(jack,jill)} and writes $0.8$ into one
+region of the \texttt{date} token's residual stream. Head~1 attends to
+\texttt{like(jill,jack)} and writes $0.4$ into another region. By the
+time the FFN executes, both evidence sources are simultaneously
+available. The gather phase is complete before the update step begins.
+
+\subsection*{Evidence from Trained Models}
+
+Mechanistic interpretability studies have identified attention patterns
+consistent with the routing behavior predicted by the constructive
+mapping. Wang et al.~\cite{wang2022ioi} identify ``name mover heads'' in
+GPT-2 small that copy token-specific information to target positions,
+behavior closely resembling crossProject-style routing. Their Q/K
+circuits also exhibit approximately rank-1 structure, qualitatively
+consistent with projectDim-style matching.
+
+Empirical classification studies further identify several recurring head
+types:
+
+\begin{itemize}
+\item \textbf{Semantic routing heads}: attend to semantically related
+tokens determined by content rather than position. These resemble the
+gather step of the constructive BP mapping.
+
+\item \textbf{Hub heads}: attend consistently to fixed positions,
+especially the BOS token. These appear to distribute or collect global
+context information through a shared communication channel.
+\end{itemize}
+
+These observations do not by themselves prove the BP interpretation, but
+they are structurally consistent with a routing-plus-update view of
+transformer computation.
+
+\subsection*{Scaling}
+
+For Llama~3 405B, there are $L \times H = 126 \times 128 = 16{,}128$
+distinct attention-head routing patterns. The number of routing
+operations per forward pass scales as
+$L \times H \times W = 132\mathrm{M}$ at sequence length
+$W = 8192$. Within the BP interpretation, these routing operations form
+the communication structure of the implicit factor graph.

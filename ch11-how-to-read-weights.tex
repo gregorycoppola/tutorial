@@ -1,0 +1,114 @@
+\section{How to Read the Weights}
+\label{sec:how-to-read-weights}
+
+The previous sections have established what the transformer components
+\emph{are} in Bayes net terms. This section asks a more practical question:
+given a trained transformer, how would you actually find the factor graph?
+What would you look for in the weight matrices?
+
+The formal construction gives precise predictions. A transformer implementing
+exact BP has weight matrices with specific sparse structure. A trained
+transformer implementing approximate BP should show approximately this
+structure. This section makes the predictions concrete enough to test.
+
+\subsection*{What to Look for in Attention Weights}
+
+The formal AND construction uses two weight families for each head:
+\[
+W_Q = W_K = \mathrm{projectDim}(d), \qquad W_V = \mathrm{crossProject}(s, d).
+\]
+$\mathrm{projectDim}(d)$ is a rank-1 matrix with a single nonzero entry on
+the diagonal at position $(d,d)$. $\mathrm{crossProject}(s,d)$ is a rank-1
+matrix with a single nonzero entry at position $(d,s)$.
+
+The predictions for a semantic-AND head in a trained model:
+
+\begin{enumerate}
+\item \textbf{The Q/K circuit is approximately rank-1.} Compute the effective
+Q/K matrix $W_Q^T W_K$ (or its low-rank approximation). A BP head should have
+most of its singular value mass in a single component. The dominant left and
+right singular vectors should correspond to the same interpretable SAE feature
+--- the routing dimension.
+
+\item \textbf{The dominant Q/K dimension is interpretable.} The routing
+dimension $d$ should correspond to a monosemantic SAE feature: a direction in
+residual stream space that activates for a single coherent concept. The head
+attends to tokens that are high on this feature.
+
+\item \textbf{The V circuit is approximately rank-1 and off-diagonal.} The
+effective value matrix $W_V W_O$ should have most of its singular value mass
+in a single component. The input direction (source dimension $s$) should
+correspond to a belief-encoding feature (dimension~0 in the formal construction);
+the output direction (destination dimension $d$) should correspond to a scratch
+slot in the residual stream.
+
+\item \textbf{The written dimension is distinct from the routing dimension.}
+The head reads from dimension $d$ to determine whom to attend to, and writes
+to dimension $d'$ to deposit the gathered belief. These should be different
+SAE features --- routing and evidence are separate.
+\end{enumerate}
+
+\subsection*{What to Look for in FFN Weights}
+
+The formal OR construction uses:
+\[
+W_1 \text{ row } i = \text{pattern that activates unit } i, \qquad
+W_2 \text{ column } i = \text{belief update contributed by unit } i.
+\]
+With BP weights, the input pattern reads from the scratch slots (dimensions~4
+and~5) and the output update writes to the belief dimension (dimension~0).
+
+The predictions for FFN weights in a trained model:
+
+\begin{enumerate}
+\item \textbf{$W_1$ rows cluster by input feature.} Rows that read from the
+same SAE feature should form a cluster. Each cluster corresponds to one factor
+in the implicit factor graph.
+
+\item \textbf{$W_2$ columns are interpretable belief updates.} Each column
+should correspond to a human-interpretable concept update. ROME~\cite{meng2022rome}
+already confirms this: individual columns encode factual associations.
+
+\item \textbf{Input and output features are related by the factor graph.}
+If $W_1$ row $i$ reads from features $A$ and $B$, then $W_2$ column $i$ should
+update a feature $C$ where $C$ is a known consequence of $A$ and $B$ in the
+knowledge domain. The factor $(A, B) \to C$ is the implicit conditional
+probability table entry.
+\end{enumerate}
+
+\subsection*{The Closing Experiment}
+
+The experiment that would close the loop:
+
+\begin{enumerate}
+\item Take a model with a trained SAE (e.g.\ Claude 3 Sonnet with the
+Anthropic SAE).
+\item Identify semantic-AND heads by behavior (sharp attention to a
+content-determined neighbor, as in the psychic classification).
+\item For each semantic-AND head, project $W_Q^T W_K$ onto the SAE feature
+basis. Check if the dominant singular value component corresponds to a
+monosemantic feature.
+\item Check if the $W_V W_O$ circuit routes from a belief-encoding feature
+to a scratch-slot feature.
+\item For each active FFN unit, identify the input SAE features ($W_1$ row)
+and the output SAE feature ($W_2$ column). Check if the relationship is
+interpretable as a conditional probability table entry.
+\end{enumerate}
+
+If the results match the predictions, the formal BP construction has been
+directly observed in a trained model. The implicit factor graph would be
+legible: you could read off the factor potentials from the FFN weights and
+the graph structure from the attention Q/K circuits.
+
+\subsection*{Why This Has Not Been Done Yet}
+
+The technical obstacle is SAE coverage. Current SAEs cover a small fraction
+of the residual stream's representational capacity. The routing dimensions
+predicted by the formal construction may not yet have clean SAE features
+assigned to them. As SAE coverage improves --- and as the SAE feature basis
+becomes more complete --- the experiment becomes more tractable.
+
+The conceptual obstacle is that the field has not had a specific structural
+prediction to test. The formal construction provides that prediction for the
+first time. The weight inspection experiment is now a well-posed empirical
+question, not a fishing expedition.

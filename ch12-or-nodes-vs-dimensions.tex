@@ -1,0 +1,82 @@
+\section{OR Nodes vs.\ Dimensions: What $D_{ff}$ Is Actually Counting}
+\label{sec:or-nodes-dimensions}
+
+There is a persistent ambiguity in how to count the components of the implicit
+factor graph. The formal construction has one OR gate per factor node, implemented
+by one FFN hidden unit. A production transformer has $D_{ff} \approx 14{,}336$
+hidden units per layer. Are there 14,336 factor nodes per layer? That seems too
+many. This section resolves the ambiguity.
+
+\subsection*{Hidden Units Are Not Factor Nodes}
+
+In the formal construction, one factor node corresponds to one conditional
+relationship between two propositions. One FFN hidden unit implements one such
+relationship. So in the minimal construction, hidden units and factor nodes are
+in one-to-one correspondence.
+
+In a production transformer, this one-to-one correspondence breaks down in two
+ways:
+
+\begin{enumerate}
+\item \textbf{Multiple units per factor.} A single conditional relationship may
+require multiple hidden units to represent accurately with non-sigmoid activations.
+ReLU and SwiGLU require more units to approximate the exact log-odds combination
+that sigmoid implements in one unit. The factor node is still the unit of
+semantics; the hidden units are the implementation.
+
+\item \textbf{Superposed factors.} Because the residual stream represents many
+concepts via superposition, a single hidden unit may participate in multiple
+factor relationships simultaneously. The unit fires for a direction in residual
+stream space that is a superposition of several feature directions. The
+contribution it writes is a superposition of several belief updates.
+\end{enumerate}
+
+The right level of abstraction is not hidden units but \emph{SAE features}. Each
+monosemantic SAE feature corresponds to one factor node in the implicit factor
+graph. The number of factor nodes per layer is the number of active SAE features,
+not $D_{ff}$.
+
+\subsection*{What $D_{ff}$ Is Counting}
+
+$D_{ff}$ is the \emph{implementation budget} for the OR gates, not the number of
+factor nodes. It sets an upper bound on how many distinct conditional relationships
+can be represented per layer, but the actual number of semantically distinct
+relationships is determined by the SAE feature count, which is typically much
+smaller than $D_{ff}$.
+
+The ratio $D_{ff} / D_{\mathrm{model}} \approx 3$--$4$ reflects the implementation
+overhead: roughly 3--4 hidden units are needed per residual stream dimension to
+handle superposition, non-sigmoid activations, and $k$-ary neighbor chains. The
+factor graph has far fewer nodes than $D_{ff}$ suggests; $D_{ff}$ is the engineering
+budget for implementing those nodes accurately.
+
+\subsection*{The Dimension Budget}
+
+A cleaner way to think about the implicit factor graph uses the dimension budget
+directly. The residual stream has $D_{\mathrm{model}}$ dimensions. Each active
+concept occupies a direction in this space. The number of simultaneously active
+concepts is bounded by the superposition capacity --- empirically, roughly
+$10 \times D_{\mathrm{model}}$ features can be superposed with manageable
+interference~\cite{elhage2022superposition}.
+
+For Llama~3 405B with $D_{\mathrm{model}} = 16{,}384$, this gives roughly 160,000
+simultaneously active features per token position. Each feature is a factor graph
+node. The factor graph has on the order of $W \times 160{,}000 \approx 1.3\mathrm{B}$
+nodes for a sequence of length 8192. This is the scale of the implicit Bayesian
+network that one forward pass of Llama~3 405B is performing inference over.
+
+\subsection*{The OR/AND Asymmetry Revisited}
+
+With this clarification, the $D_{ff}/H \approx 416$ ratio has a cleaner
+interpretation. It is not that there are 416 OR gates for every AND gate. It is
+that the OR implementation requires 416 units of hidden dimension for every unit
+of attention head dimension. The factor graph itself may be much sparser ---
+each node may have only 2--5 neighbors in practice --- but implementing those
+sparse connections accurately in the superposed representation requires the
+$416\times$ overhead.
+
+The implication for interpretability: finding the factor graph requires working at
+the SAE feature level, not the hidden unit level. The factor potentials are encoded
+in the relationship between input SAE features (what the $W_1$ rows respond to)
+and output SAE features (what the $W_2$ columns write). The $D_{ff}$ hidden units
+are the implementation substrate; the SAE features are the semantics.

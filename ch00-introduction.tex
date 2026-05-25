@@ -1,0 +1,149 @@
+\section{Introduction}
+\label{sec:introduction}
+
+A sigmoid transformer can exactly realize belief propagation
+computations. This is not a loose analogy or a high-level functional
+similarity: under the constructive mapping proved in the companion
+paper~\cite{coppola2026transformers}, the transformer forward pass
+implements the BP update equations directly. The present paper is a
+tutorial guide to what that result means, how it connects to
+transformer components, and what it implies for understanding trained
+models.
+
+The formal anchor is the companion theorem. This paper does not
+rederive it. Instead, it builds the conceptual picture around it:
+opening each transformer component, identifying its role in the
+message-passing account, and connecting the formal result to a
+converging body of empirical work in mechanistic interpretability,
+in-context learning, and graphical model theory.
+
+\subsection*{Scope of the Claims}
+
+The paper operates at four distinct levels:
+
+\begin{enumerate}
+\item \textbf{Exact constructive results.} The companion theorem gives
+an exact realization of BP in sigmoid transformers under a constructive
+weight mapping~\cite{coppola2026transformers}.
+
+\item \textbf{Empirical observations.} Mechanistic interpretability
+results from trained transformers exhibit structures consistent with
+the BP interpretation.
+
+\item \textbf{Mechanistic interpretation.} Transformer components can
+be understood through a routing-and-inference decomposition aligned
+with BP primitives.
+
+\item \textbf{Speculative extensions.} The discussions of grounding,
+hallucination, and hybrid continuous-discrete inference are
+interpretive extensions rather than established theorems.
+\end{enumerate}
+
+These claims have different evidentiary status and are marked
+accordingly throughout the paper.
+
+\subsection*{The Five Correspondences}
+
+The tutorial is organized around five structural correspondences
+between transformer components and the operations of belief
+propagation:
+
+\begin{enumerate}
+\item \textbf{The residual stream is the belief state.} Each token's
+$D_{\mathrm{model}}$-dimensional vector stores the current accumulated
+state of inference at that node. Residual connections preserve and
+update beliefs across layers rather than replacing them outright.
+
+\item \textbf{Attention performs evidence gathering.} Attention heads
+route information from neighboring tokens into the residual stream
+before the update step executes. Multiple required evidence sources
+become jointly available in a shared workspace.
+
+\item \textbf{The FFN performs belief update.} Under the constructive
+BP mapping, the feed-forward network computes
+$\updateBelief(m_0, m_1) = \sigma(\logit(m_0) + \logit(m_1))$ from
+the gathered evidence. This is the Bayesian update rule for
+independent binary evidence sources --- exact with sigmoid activation,
+approximate with ReLU or SwiGLU.
+
+\item \textbf{Layers correspond to rounds of message passing.} One
+layer is one gather-then-update cycle. Stacking layers corresponds
+naturally to iterative rounds of inference.
+
+\item \textbf{The scaling dimensions describe inference capacity.} The
+architectural dimensions --- $W$, $L$, $H$, $D_{ff}$,
+$D_{\mathrm{model}}$ --- determine the scale of the routing and
+inference operations available to the network.
+\end{enumerate}
+
+\subsection*{The Running Example}
+
+Throughout the paper we will repeatedly use a simple example involving
+three propositions:
+\[
+\texttt{like(jack,jill)}, \quad \texttt{like(jill,jack)}, \quad
+\texttt{date(jack,jill)}.
+\]
+
+The example is intentionally small. Its purpose is not realism but
+clarity. We use it repeatedly to illustrate how attention gathers
+evidence, how FFNs combine beliefs, how residual streams store
+intermediate state, how layers propagate information over multiple
+rounds, and what grounding means in a formally declared concept space.
+By keeping the example fixed across sections, the paper can focus on
+computational structure rather than constantly introducing new
+notation.
+
+\subsection*{The Underlying Algebra}
+
+All five correspondences rest on the same mathematical spine: the
+log-odds algebra of independent binary evidence, developed by Turing
+and Good~\cite{good1950probability}, formalized by Pearl as the
+sum-product algorithm~\cite{pearl1988probabilistic}, and realized
+exactly by the constructive sigmoid mapping. Within this mapping,
+sigmoid is the exact activation required to recover the log-odds
+update equations. Part~I develops this foundation before turning to
+the architectural correspondences.
+
+\subsection*{Grounded and Ungrounded Inference}
+
+The distinction between grounded and ungrounded transformers is not
+primarily architectural. In both cases, the network performs inference
+over an implicit factor graph. The difference is whether the graph has
+a declared ontology, finite concept space, and verifier that permits
+formal correctness guarantees.
+
+For grounded transformers operating on tree-structured knowledge
+bases, the constructive BP results provide exact posterior guarantees.
+Standard language models do not provide guarantees of this kind
+because their internal representations are not tied to a formally
+declared ontology. Part~IV develops this distinction and its
+implications for hallucination and reliability.
+
+\subsection*{Convergent Evidence}
+
+Five independent research programs have converged on the same general
+picture from different starting points: the transformer forward pass
+implements a form of distributed probabilistic inference. Mechanistic
+interpretability studies identify routing heads and structured FFN
+updates. Belief-state geometry work finds posterior-like organization
+in residual streams. In-context learning work models transformers as
+Bayesian learners. Graph neural network research established the
+message-passing connection. Constructive weight-learning experiments
+show that optimization reliably discovers BP-like solutions. Part~V
+surveys this convergence.
+
+\subsection*{How to Read This Paper}
+
+Part~I establishes the mathematical foundation. Readers already
+familiar with log-odds algebra and belief propagation can skim
+portions of it. Part~II develops the core architectural
+correspondences component by component. Part~III examines
+superposition, the three softmaxes, and the relationship between
+trained weights and implicit factor graphs. Part~IV addresses
+grounding and hallucination. Part~V surveys convergent evidence and
+related work.
+
+The formal constructive results are developed
+in~\cite{coppola2026transformers}. This paper is a tutorial guide to
+the conceptual landscape those results open up.

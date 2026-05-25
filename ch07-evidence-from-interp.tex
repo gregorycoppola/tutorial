@@ -1,0 +1,132 @@
+\section{Evidence from Mechanistic Interpretability}
+\label{sec:interp-evidence}
+
+The mechanistic interpretability literature provides some of the
+strongest empirical motivation for viewing transformers through a
+message-passing lens. Importantly, most of this work was not originally
+framed in terms of belief propagation or Bayesian networks. The value of
+the BP perspective is therefore not that it replaces the
+interpretability literature, but that it offers a common language for
+organizing many of its findings.
+
+This section surveys several influential interpretability results and
+discusses how they naturally fit into a routing-and-update view of
+transformer computation.
+
+\subsection*{Induction Heads}
+
+Olsson et al.~\cite{olsson2022induction} identify ``induction heads'':
+two-head circuits that implement in-context pattern matching. Head~1
+(the ``prefix'' head) attends from position $t$ back to the previous
+occurrence of the current token. Head~2 (the ``induction'' head) then
+attends to the token that followed that previous occurrence.
+
+From the tutorial BP perspective, this resembles a two-stage gather
+operation. One head retrieves a historical context; the second uses that
+retrieved context to identify the next relevant source of evidence. The
+important point is not that induction heads are ``literally'' BP nodes,
+but that the routing structure closely resembles iterative message
+passing over an implicit dependency graph.
+
+\subsection*{Name Mover Heads and the IOI Circuit}
+
+Wang et al.~\cite{wang2022ioi} reverse-engineer the indirect object
+identification circuit in GPT-2 small. The key components are ``name
+mover heads'' that copy token identity information from one position to
+another. The Q/K circuits of these heads exhibit approximately rank-1
+structure, while the V circuits route token-specific content into target
+positions.
+
+This behavior is naturally compatible with the routing interpretation
+developed earlier in the paper. In the constructive BP mapping, sparse
+projectDim/crossProject-style operations perform a similar function:
+matching one feature dimension and routing information into another
+location in the residual stream.
+
+The BP framework therefore provides one possible interpretation of why
+such sparse routing patterns repeatedly emerge in trained models.
+
+\subsection*{FFN Key-Value Memories}
+
+Geva et al.~\cite{geva2021ffn} show that FFN layers behave like
+key-value memories: the first-layer weight matrix detects patterns and
+the second-layer matrix writes structured updates back into the residual
+stream. Many hidden units correspond to human-interpretable concepts or
+contexts.
+
+Within the tutorial framework developed here, FFNs can be interpreted as
+performing local update operations conditioned on gathered evidence. The
+``key'' determines when a particular update should activate; the
+``value'' determines what modification is written into the evolving
+residual-stream state.
+
+This interpretation does not require treating FFN rows as literal
+conditional-probability tables. Rather, it suggests that the key-value
+memory view and the message-passing view may be complementary ways of
+describing the same computational structure.
+
+\subsection*{ROME and Localized Editing}
+
+Meng et al.~\cite{meng2022rome} demonstrate that factual associations in
+GPT models can sometimes be edited by modifying localized FFN
+parameters. The resulting edits are often surprisingly surgical:
+changing one association without broadly disrupting neighboring
+behavior.
+
+From the BP perspective, this resembles modifying a localized update
+rule or factor potential within a larger inference system. Again, the
+point is not that ROME directly proves the existence of explicit Bayes
+net tables inside the transformer. The point is that localized,
+structured update behavior is naturally compatible with a factorized
+message-passing interpretation.
+
+\subsection*{Sparse Autoencoders and Features}
+
+Templeton et al.~\cite{templeton2024monosemanticity} train sparse
+autoencoders on Claude 3 Sonnet and recover millions of interpretable
+features from the residual stream. Many features exhibit coherent
+semantic structure, feature neighborhoods, and suppression
+relationships.
+
+Within the tutorial framing, these features can be viewed as candidate
+nodes or directions in an implicit computational graph. Their activation
+values behave like evolving internal state variables whose interactions
+are mediated through attention and FFN updates.
+
+The ``Golden Gate Claude'' experiment is especially suggestive from this
+perspective: clamping one feature propagates structured downstream
+effects through the model, much like injecting evidence into a connected
+message-passing system.
+
+\subsection*{Attribution Graphs}
+
+Recent work from Anthropic~\cite{anthropic2025attribution} constructs
+attribution graphs tracing information flow between features across
+layers. These graphs make visible the pathways through which activations
+influence one another during a computation.
+
+From the tutorial BP perspective, attribution graphs resemble partial
+visualizations of the model's implicit message-passing structure:
+attention routes information, FFNs apply transformations, and residual
+streams accumulate evolving state over depth.
+
+\subsection*{Synthesis}
+
+The BP perspective should be understood as an organizing framework for
+these findings rather than a claim that interpretability researchers
+were unknowingly ``discovering Bayes nets.''
+
+The important observation is simply that many empirical findings in
+mechanistic interpretability fit naturally into a routing-plus-update
+view of transformer computation:
+\begin{itemize}
+\item induction heads resemble multi-stage retrieval,
+\item routing heads move structured information between positions,
+\item FFNs apply localized updates,
+\item sparse features behave like persistent latent variables,
+\item and attribution graphs reveal structured pathways of influence.
+\end{itemize}
+
+The convergence between these findings and the message-passing
+perspective is one reason the BP framework is useful as a conceptual
+tool for understanding transformers.
