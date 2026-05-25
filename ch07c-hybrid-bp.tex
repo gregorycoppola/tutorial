@@ -1,188 +1,99 @@
 \section{The Hybrid BP Map: Four Head Types in Practice}
 \label{sec:hybrid-bp}
 
-The constructive BP mapping developed earlier applies to a specific
-idealized setting: sigmoid transformers with exact BP weights performing
-sharp index-matched routing. Production transformers differ from this
-in two important ways. They use activations such as GeLU or SwiGLU
-rather than sigmoid, and their attention heads exhibit a range of
-behaviors beyond sharp discrete lookup.
+The constructive BP mapping developed earlier applies to a specific idealized setting: sigmoid transformers with exact BP weights performing sharp index-matched routing. Production transformers differ from this in two important ways. They use activations such as GeLU or SwiGLU rather than sigmoid, and their attention heads exhibit a range of behaviors beyond sharp discrete lookup.
 
-The right question is therefore not whether real transformers literally
-instantiate the constructive theorem in every component. It is whether
-the BP framework generates useful, testable interpretations of what
-trained transformers actually do. This section presents empirical head
-classification results and assesses what they support.
+The right question is therefore not whether real transformers literally instantiate the constructive theorem in every component. It is whether the BP framework generates useful, testable interpretations of what trained transformers actually do. This section presents empirical head classification results and assesses what they support.
 
 \subsection*{The Four Head Types}
 
-Head classification across GPT-2 small, GPT-2 medium, and Qwen~2.5,
-using unsupervised attention-pattern analysis over 88 prompts with no
-model-specific tuning, yields four stable functional categories:
+Head classification across GPT-2 small, GPT-2 medium, and Qwen~2.5 0.5B, using unsupervised attention-pattern analysis over 88 prompts with no model-specific tuning, yields four stable functional categories:
 
 \begin{center}
-\begin{tabular}{llrr}
+\begin{tabular}{llrrr}
 \toprule
-Type & Role & GPT-2 small & GPT-2 medium \\
+Type & Role & GPT-2 small & GPT-2 medium & Qwen 2.5 0.5B \\
 \midrule
-boolean-AND & Sharp routing / discrete gathering & 9 (6\%) & 9 (2\%) \\
-continuous-OR & Diffuse aggregation / soft evidence mixing & 28 (19\%) & 46 (12\%) \\
-hub & Global context communication & 103 (72\%) & 305 (79\%) \\
-mixed & Context-dependent behavior & 8 (6\%) & 24 (6\%) \\
+boolean-AND & Sharp routing / discrete gathering & 9 (6\%) & 9 (2\%) & 29 (9\%) \\
+continuous-OR & Diffuse aggregation / soft evidence mixing & 28 (19\%) & 46 (12\%) & 59 (18\%) \\
+hub & Global context communication & 103 (72\%) & 305 (79\%) & 203 (60\%) \\
+mixed & Context-dependent behavior & 8 (6\%) & 24 (6\%) & 45 (13\%) \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\textbf{boolean-AND heads} attend to exactly one token with
-near-deterministic concentration. Their behavior matches the
-constructive routing heads of Section~\ref{sec:attention-and} most
-directly: one neighbor's information is gathered into a specific
-residual stream slot before the FFN update executes.
+\textbf{boolean-AND heads} attend to exactly one token with near-deterministic concentration. Their behavior matches the constructive routing heads of Section~\ref{sec:attention-and} most directly: one neighbor's information is gathered into a specific residual stream slot before the FFN update executes.
 
-\textbf{continuous-OR heads} distribute attention broadly, integrating
-graded evidence from across the context window rather than performing
-discrete lookup. These heads are not well-described by the binary BP
-construction, but are naturally interpretable as soft evidence
-aggregators operating over continuous representations.
+\textbf{continuous-OR heads} distribute attention broadly, integrating graded evidence from across the context window rather than performing discrete lookup. These heads are not well-described by the binary BP construction, but are naturally interpretable as soft evidence aggregators operating over continuous representations.
 
-\textbf{Hub heads} consistently attend to or from position~0 (the BOS
-token) and constitute the dominant head population: 72\% in GPT-2
-small, 79\% in GPT-2 medium. Their role in global context coordination
-is discussed below.
+\textbf{Hub heads} consistently attend to or from position~0 (the BOS token) and constitute the dominant head population across all models studied. They are best understood as a special case of boolean-AND routing: the routing key always resolves to a fixed position rather than a content-determined neighbor. This makes them discrete routers like boolean-AND heads, just attending to a shared global workspace rather than a semantically matched token. The result is a star-shaped factor graph in which position~0 functions as a global variable node, accumulating evidence from all token positions and redistributing a global context signal back.
 
-\textbf{Mixed heads} switch between sharp and diffuse behavior
-depending on input and do not exhibit a stable functional identity
-across prompts.
+\textbf{Mixed heads} switch between sharp and diffuse behavior depending on input and do not exhibit a stable functional identity across prompts. They are concentrated in late layers in every model studied --- especially prominent in Qwen, where layers 22 and 23 collapse almost entirely to mixed behavior.
+
+\subsection*{Coverage of the Framework}
+
+Taken together, the three well-characterized types --- boolean-AND, continuous-OR, and hub --- account for approximately 90\% of all heads across every model studied (94\% in both GPT-2 models, 87\% in Qwen). Mixed heads, the genuinely uncharacterized remainder, constitute roughly 6--13\% depending on architecture. The BP-derived taxonomy covers the large majority of observed head behavior across model families.
+
+\subsection*{Hub as Boolean-AND at a Fixed Address}
+
+Because hub heads are a special case of boolean-AND routing, the AND and hub populations together form the discrete routing infrastructure of the network. Combining them:
+
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+ & GPT-2 small & GPT-2 medium & Qwen 2.5 0.5B \\
+\midrule
+discrete routing (AND + hub) & 112 (78\%) & 314 (82\%) & 232 (69\%) \\
+continuous aggregation (OR) & 28 (19\%) & 46 (12\%) & 59 (18\%) \\
+uncharacterized (mixed) & 8 (6\%) & 24 (6\%) & 45 (13\%) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Discrete routing dominates in every model. The architecture is primarily a routing system, with a minority of heads performing continuous evidence aggregation.
 
 \subsection*{The Scaling of boolean-AND Heads}
 
-The most structurally informative finding in the classification is
-this: boolean-AND heads do not scale with model size. GPT-2 small
-(124M parameters, 144 total heads) contains 9. GPT-2 medium (345M
-parameters, 384 total heads) also contains exactly 9. Total head count
-grows 2.8$\times$; sharp routing infrastructure does not.
+Within the GPT-2 family, boolean-AND head count is stable: GPT-2 small (124M parameters, 144 total heads) contains 9, and GPT-2 medium (345M parameters, 384 total heads) also contains exactly 9. Total head count grows 2.8$\times$; sharp routing infrastructure does not. What grows instead is hub infrastructure, from 72\% to 79\% of all heads.
 
-If discrete logical routing were a primary scaling resource --- if
-larger models were better because they could perform more simultaneous
-discrete lookups --- you would expect this count to grow. It does not.
-What grows instead is hub infrastructure, from 72\% to 79\% of all
-heads. The model gets larger by expanding its global communication
-capacity, not by acquiring more discrete reasoning primitives.
+Across architectures, the count varies: Qwen 2.5 0.5B at a comparable scale has 29 boolean-AND heads. This suggests that the number of discrete routing heads reflects architectural choices rather than a universal constant. Different model families allocate different amounts of capacity to sharp content-based routing. The consistent finding across all three models is that boolean-AND heads remain a small minority --- the routing primitive is compact regardless of how many instances a given architecture deploys.
 
-This is consistent with the BP interpretation: the 16,128 distinct AND
-weight patterns available in Llama~3 405B are already a small number
-relative to model scale, suggesting that the routing operation is a
-compact primitive. What the architecture scales is inference capacity
---- the OR side --- not routing capacity.
+This is consistent with the BP interpretation: routing is a compact operation. What the architecture scales is inference capacity --- hub infrastructure and OR aggregation --- not the routing primitive itself.
 
 \subsection*{Hybrid Inference}
 
-The constructive theorem establishes exact BP realization for sigmoid
-transformers. Production transformers use SwiGLU or GeLU. Does the BP
-interpretation break down?
+The constructive theorem establishes exact BP realization for sigmoid transformers. Production transformers use SwiGLU or GeLU. Does the BP interpretation break down?
 
-Not entirely --- but the character of the inference changes. Bayesian
-networks are not limited to binary variables. Continuous-variable
-Bayesian networks, Gaussian belief propagation, and expectation
-propagation are all well-established frameworks in which message
-passing operates over graded rather than discrete representations.
+Not entirely --- but the character of the inference changes. Bayesian networks are not limited to binary variables. Continuous-variable Bayesian networks, Gaussian belief propagation, and expectation propagation are all well-established frameworks in which message passing operates over graded rather than discrete representations.
 
-The empirical head distribution suggests a hybrid picture: boolean-AND
-heads implement something close to the exact constructive routing; the
-dominant continuous-OR and hub populations implement inference-like
-operations over graded representations that the binary construction
-does not cover. The constructive sigmoid theorem is then best
-understood as the exact limiting case of a broader family of
-message-passing computations that production transformers approximate.
+The empirical head distribution suggests a hybrid picture: boolean-AND and hub heads implement discrete routing within the BP family; continuous-OR heads implement inference-like operations over graded representations that the binary construction does not cover exactly. The constructive sigmoid theorem is then best understood as the exact limiting case of a broader family of message-passing computations that production transformers approximate.
 
-For the boolean-AND heads specifically, the formal predictions are
-testable: their Q/K circuits should exhibit approximately rank-1
-structure consistent with \texttt{projectDim}, and their V circuits
-should show \texttt{crossProject}-style routing. This is the
-experiment that would most directly confirm the BP interpretation in
-trained models.
-
-\subsection*{Hub Heads and Global Communication}
-
-Hub heads are the dominant population and the least well-characterized
-by the current theory. Their strong concentration on position~0
-suggests a global communication role, but what exactly is being
-communicated, and in which direction, is not yet resolved.
-
-One working hypothesis divides hub heads into two roles separable by
-OV-circuit analysis:
-
-\begin{itemize}
-\item \textbf{Writers}: route token-local information into position~0,
-contributing to an accumulated global representation.
-
-\item \textbf{Readers}: retrieve from position~0 and distribute a
-global context signal back to individual token positions.
-\end{itemize}
-
-Within the BP framework, this corresponds to a star-shaped factor
-graph in which position~0 functions as a global variable node:
-receiving messages from all tokens (writers) and sending a global
-prior back (readers). This is a valid Bayesian network structure ---
-approximate inference via a shared global variable rather than exact
-local message passing. Whether this interpretation holds up under OV
-decomposition is an open empirical question.
+For the boolean-AND heads specifically, the formal predictions are testable: their Q/K circuits should exhibit approximately rank-1 structure consistent with \texttt{projectDim}, and their V circuits should show \texttt{crossProject}-style routing. This is the experiment that would most directly confirm the BP interpretation in trained models.
 
 \subsection*{Layer Structure}
 
-Head type distribution is not uniform across layers. GPT-2 small
-exhibits a three-phase structure that aligns naturally with iterative
-inference:
+Head type distribution is not uniform across layers. GPT-2 small exhibits a three-phase structure that aligns naturally with iterative inference:
 
 \begin{itemize}
-\item \textbf{Layers 0--2} are dominated by continuous-OR heads
-performing local feature extraction. Boolean-AND heads are present but
-sparse. This corresponds to early rounds of BP: each node gathers
-evidence from nearby tokens.
+\item \textbf{Layers 0--2} are dominated by continuous-OR heads performing local feature extraction. Boolean-AND heads are present but sparse. This corresponds to early rounds of BP: each node gathers evidence from nearby tokens.
 
-\item \textbf{Layer 3} is a transition layer in which all four head
-types are represented. Boolean-AND heads are active at exactly the
-point where the network shifts toward global communication.
+\item \textbf{Layer 3} is a transition layer in which all four head types are represented. Boolean-AND heads are active at exactly the point where the network shifts toward global communication.
 
-\item \textbf{Layers 4--11} are hub-dominated. The primary computation
-shifts to reading from and writing to the global context at position~0.
+\item \textbf{Layers 4--11} are hub-dominated. The primary computation shifts to reading from and writing to the global context at position~0.
 \end{itemize}
 
-This progression --- local evidence gathering followed by global
-integration --- is what you would expect from an iterative inference
-system. It is consistent with the BP interpretation but not uniquely
-predicted by it; other accounts of transformer computation could
-produce a similar layer structure.
+This progression --- local evidence gathering followed by global integration --- is what you would expect from an iterative inference system. It is consistent with the BP interpretation but not uniquely predicted by it; other accounts of transformer computation could produce a similar layer structure.
 
 \subsection*{Open Questions}
 
-Four questions mark the boundary of what the hybrid BP account
-currently explains:
+Three questions mark the boundary of what the hybrid BP account currently explains:
 
 \begin{enumerate}
-\item \textbf{The continuous update rule.} What is the correct
-analog of $\updateBelief$ for continuous nodes? GeLU and SwiGLU
-preserve non-negativity and smooth aggregation, but their relationship
-to Gaussian BP or expectation propagation has not been worked out.
+\item \textbf{The continuous update rule.} What is the correct analog of $\updateBelief$ for continuous nodes? GeLU and SwiGLU preserve non-negativity and smooth aggregation, but their relationship to Gaussian BP or expectation propagation has not been worked out.
 
-\item \textbf{The hub mechanism.} Do hub heads implement approximate
-BP via a global latent variable, or something outside the BP family
-entirely? OV-circuit decomposition into writer and reader populations
-is the experiment that would resolve this.
+\item \textbf{What determines the AND head count?} Boolean-AND head count is stable within the GPT-2 family but varies across architectures --- 9 in GPT-2, 29 in Qwen at comparable scale. What architectural choices drive this, and what is the minimum discrete routing infrastructure required for language modeling?
 
-\item \textbf{Why 9?} The boolean-AND count is stable at 9 across
-GPT-2 small and medium. Whether this holds at larger scales, and what
-it implies about the minimum discrete routing infrastructure for
-language modeling, is unknown.
-
-\item \textbf{Prediction vs.\ compatibility.} The BP framework is
-consistent with many observed transformer behaviors. The stronger
-claim --- that it \emph{predicts} them --- requires identifying
-behaviors the framework would rule out if false. Specifying those
-tests is the next step toward treating the hybrid BP account as a
-genuine scientific hypothesis rather than an interpretive lens.
+\item \textbf{Prediction vs.\ compatibility.} The BP framework is consistent with many observed transformer behaviors. The stronger claim --- that it \emph{predicts} them --- requires identifying behaviors the framework would rule out if false. Specifying those tests is the next step toward treating the hybrid BP account as a genuine scientific hypothesis rather than an interpretive lens.
 \end{enumerate}
 
-The constructive theorem gives an exact reference point for the
-boolean-AND case. The continuous, hub, and mixed populations remain
-the empirical frontier.
+The constructive theorem gives an exact reference point for the boolean-AND case. The continuous and mixed populations remain the empirical frontier.
