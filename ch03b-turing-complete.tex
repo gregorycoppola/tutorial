@@ -1,0 +1,96 @@
+\section{Two Theorems, One Weight Construction}
+\label{sec:turing-complete}
+
+Before developing the five correspondences in detail, it is worth pausing on a
+structural fact that makes the BP interpretation more than a clever observation.
+The transformer's routing mechanism is so clean that the \emph{same two weight
+families} appear in two completely independent proofs: the Turing completeness
+proof and the BP proof. This is not a coincidence. It reveals that the
+projectDim/crossProject construction is the natural primitive for what attention
+heads actually do.
+
+\subsection*{Turing Completeness}
+
+P\'{e}rez et al.~\cite{perez2021turing} proved that transformers are Turing
+complete under floating-point arithmetic. The companion
+paper~\cite{coppola2026transformers} gives a constructive Lean-verified proof
+via Boolean circuit simulation:
+
+\begin{theorem}[Transformer is Turing Complete]
+For any Turing machine $M$, there exist transformer weights $W$ such that for
+all tapes $\tau$ and step counts $t$:
+\[
+\mathrm{transformerAgent}(W, \mathrm{encode}(M, \tau), t)
+= \mathrm{encode}(M.\mathrm{run}(\tau, t)).
+\]
+Formally verified in Lean~4 against standard mathematical axioms.
+\end{theorem}
+
+The proof is constructive. Any Turing machine step decomposes into a Boolean
+circuit. A transformer simulates any Boolean circuit in a single FFN forward
+pass via threshold gates. The key insight is the role of each component:
+\emph{attention is lookup} (find the tape cell at the current head position),
+\emph{FFN is gating} (apply the transition function), and \emph{the agent loop
+is iteration} (step the machine).
+
+\subsection*{The Same Two Weight Families}
+
+The Turing completeness proof and the BP proof use the same two sparse matrix
+families for Q/K and V weights:
+
+\begin{itemize}
+\item $\mathrm{projectDim}(d)$: a rank-1 diagonal matrix extracting dimension
+$d$. Used as $W_Q$ and $W_K$. The attention score $e_j[d] \cdot e_k[d]$ peaks
+when token $k$'s stored index matches token $j$'s query value --- exact index
+matching. In the TM proof: finds the tape cell at the head position. In the BP
+proof: finds the neighbor node whose belief to gather.
+
+\item $\mathrm{crossProject}(s, d)$: a rank-1 off-diagonal matrix reading
+source dimension $s$ and writing to destination dimension $d$. Used as $W_V$.
+In the TM proof: routes the tape symbol to the transition function. In the BP
+proof: routes the neighbor's belief into the residual stream scratch slot.
+\end{itemize}
+
+Both proofs also reuse two results from the Turing completeness Lean
+development: \texttt{posEncDot\_distinct} (the $Q \cdot K$ score is strictly
+maximized at the correct target) and \texttt{softmax\_concentrates} (at
+sufficient temperature, softmax converges to a point mass at the argmax).
+
+\subsection*{What This Means}
+
+The shared weight construction is significant for two reasons.
+
+First, it means the routing mechanism is \emph{canonical}. There is one natural
+way to make attention heads perform index-based lookup in a transformer, and
+both the Turing and BP interpretations use it. This is not a special-case
+construction tailored to BP --- it is the architecture's natural primitive.
+
+Second, it separates routing from inference. The projectDim/crossProject
+construction handles routing (which token to look at) identically in both
+proofs. What differs is what happens \emph{after} the lookup: the TM proof
+uses the FFN as a Boolean gate; the BP proof uses it as a probabilistic
+update. Same routing, different inference. The transformer is a general-purpose
+routing-plus-inference architecture, and both Turing completeness and BP are
+natural instances of it.
+
+The Turing completeness result says: the transformer \emph{can} compute
+anything. The BP result says: it \emph{does} compute something specific ---
+belief propagation --- with these specific weights. Both are needed for a
+complete picture of what the architecture is capable of and what it actually
+does.
+
+\subsection*{Empirical Confirmation}
+
+The \texttt{learner} repository confirms that gradient descent finds
+TM-simulation weights from scratch. Five structurally distinct Turing machines
+--- binary incrementer, decrementer, bitwise complement, left shift, right
+shift --- were trained using a standard transformer encoder (2~layers, 2~heads,
+$d_{\mathrm{model}} = 32$, $\sim$4K parameters) from random initialization.
+All five reached 100\% validation accuracy in 4 epochs with identical
+hyperparameters and no per-machine tuning~\cite{coppola2026transformers}.
+
+The formal construction is not merely theoretically possible --- it is what
+gradient descent finds given a clean training signal. This parallels the
+\texttt{bayes-learner} result for BP (val MAE 0.000752), which we develop in
+Section~\ref{sec:ffn-or}. Together they establish a consistent pattern: the
+formal weight constructions are what the architecture naturally learns.

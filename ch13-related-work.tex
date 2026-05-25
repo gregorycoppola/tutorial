@@ -1,0 +1,107 @@
+\section{Related Work}
+\label{sec:related-work}
+
+Five independent research programs have converged on the conclusion that the
+transformer forward pass implements belief propagation. None of them set out to
+prove this. Each approached the transformer from a different direction and found
+the same structure. This section surveys each program and its relationship to
+the account developed in this paper.
+
+\subsection*{Belief State Geometry}
+
+Several recent papers establish that transformer residual streams represent belief
+states linearly. Shai et al.~\cite{shai2024belief} show that the residual stream
+encodes a linear representation of the agent's belief state over possible world
+states, updated by attention operations. Piotrowski et
+al.~\cite{piotrowski2025constrained} show that attention implements constrained
+belief updates consistent with Bayesian conditioning. Agarwal et
+al.~\cite{agarwal2025bayesian} show that transformers are primitively complete for
+Bayesian inference --- any Bayesian computation can be implemented by a transformer.
+
+These results are complementary to the account here. They establish the
+\emph{what} (the residual stream is a belief state; attention implements Bayesian
+updates) without fully specifying the \emph{how} (the specific weight construction
+that makes this exact, the AND/OR decomposition, the factor graph structure). The
+formal construction of~\cite{coppola2026transformers} provides the missing
+mechanistic account.
+
+\subsection*{In-Context Learning as Bayesian Inference}
+
+Xie et al.~\cite{xie2022icl} argue that in-context learning is implicit Bayesian
+inference at the population level: the model maintains a posterior over latent
+document concepts and updates it as it sees more examples. This is a statistical
+account --- it describes what ICL accomplishes in terms of the training distribution
+--- rather than a mechanistic account of how individual forward passes implement it.
+
+The BP account is the mechanistic complement: each forward pass is one round of BP
+on the implicit factor graph, and in-context learning works because the implicit
+factor graph encodes the conditional relationships learned from training. The two
+accounts are consistent and describe different levels of abstraction.
+
+\subsection*{Constructive Weight Proofs}
+
+Aky\"{u}rek et al.~\cite{akyurek2023icl} and von Oswald et
+al.~\cite{oswald2023gradient} show that specific weight patterns make transformers
+perform implicit gradient descent, explaining in-context learning as approximate
+optimization. The methodology is the same as~\cite{coppola2026transformers}:
+construct explicit weights that implement a specific algorithm, prove correctness,
+confirm empirically.
+
+The key differences: BP is exact on trees (not approximate or asymptotic), and the
+BP account is mechanistic per-instance (each forward pass computes a specific
+posterior) rather than statistical at the population level (the model behaves as if
+it were doing Bayesian inference in expectation over the training distribution).
+
+\subsection*{GNNs, Message Passing, and Attention}
+
+Scarselli et al.~\cite{scarselli2009gnn} established that graph neural networks
+implement belief propagation on explicit graph structure. Gilmer et
+al.~\cite{gilmer2017mpnn} unified GNNs under the message passing neural network
+(MPNN) framework. Yoon et al.~\cite{yoon2019gnn} extended this to approximate
+inference. Joshi~\cite{joshi2020gnn} observed that full self-attention is equivalent
+to a GNN on a complete graph.
+
+The contribution of~\cite{coppola2026transformers} is orthogonal: a standard
+transformer with full self-attention and no attention mask implements BP on an
+explicit \emph{external} factor graph, where graph structure is encoded in token
+embeddings and routing is discovered via Q/K index matching. The graph is not
+hardwired into the attention mask --- it is represented in the token content.
+
+\subsection*{Mechanistic Interpretability}
+
+Elhage et al.~\cite{elhage2021mathematical} develop the mathematical framework for
+transformer circuits. Olsson et al.~\cite{olsson2022induction} identify induction
+heads as a specific named algorithm discovered by gradient descent. Wang et
+al.~\cite{wang2022ioi} reverse-engineer the full IOI circuit in GPT-2 small.
+Geva et al.~\cite{geva2021ffn} establish the key-value memory interpretation of
+FFN layers. Meng et al.~\cite{meng2022rome} show that factual associations can be
+edited by modifying FFN weights. Templeton et al.~\cite{templeton2024monosemanticity}
+find millions of monosemantic features via SAEs.
+
+The BP account gives this literature a unified theoretical framework. Every major
+finding maps onto a component of the belief propagation account: induction heads
+are two-round BP gathers; name mover heads are projectDim/crossProject routing; FFN
+key-value memories are factor potentials; ROME edits are factor potential
+modifications; SAE features are factor graph nodes. The field has been mapping the
+implicit factor graph without a map. This paper provides the map.
+
+\subsection*{The Log-Odds Tradition}
+
+Good~\cite{good1950probability} and Turing formalized log-odds addition as the
+correct algebra for combining independent binary evidence. Pearl~\cite{pearl1988probabilistic}
+applied this algebra to graphical models via the sum-product algorithm. The
+connection between this tradition and the transformer architecture has not previously
+been made explicit before~\cite{coppola2026transformers}. Section~\ref{sec:log-odds}
+of this paper traces the lineage and establishes that the sigmoid transformer is the
+mechanical implementation of the Turing-Good-Pearl algebra.
+
+\subsection*{Summary}
+
+The BP account of the transformer is not a new claim in isolation. It is the
+convergence point of five independent research programs. The formal
+contribution of~\cite{coppola2026transformers} is to make the convergence
+rigorous: a formally verified constructive proof that a sigmoid transformer with
+any weights implements weighted BP on its implicit factor graph, with explicit
+weights for the exact case, a uniqueness theorem showing exact posteriors force
+those weights, and empirical confirmation that gradient descent finds the
+predicted structure. This paper makes that formal account concrete and readable.

@@ -1,0 +1,84 @@
+\section{The Three Softmaxes}
+\label{sec:three-softmaxes}
+
+There are three places in the transformer where softmax or sigmoid appears. They do
+three completely different jobs. Conflating them is the single most common source of
+confusion about what the transformer is computing.
+
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+& Job & Input & Semantics \\
+\midrule
+Softmax 1 & Routing & $Q \cdot K$ scores & Differentiable argmax \\
+Softmax 2 & Inference & Neighbor beliefs & Bayesian posterior \\
+Softmax 3 & Generation & Final hidden state & Token distribution \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{Softmax 1: Attention (Routing)}
+
+The first softmax appears inside every attention head, applied to the query-key dot
+products. Its job is routing: which token should I look at? This is a differentiable
+argmax --- at high temperature it concentrates all weight on the token with the
+highest $Q \cdot K$ score.
+
+In the BP construction, the attention softmax fetches a neighbor's belief by index
+matching. The query encodes ``I am looking for the token at index $i$''; the key
+encodes ``I am the token at index $i$''; the dot product peaks at the correct match;
+softmax concentrates the weight there. The result is a lookup table.
+
+This softmax is \emph{not} doing inference. It is not computing a probability over
+hypotheses. It is selecting which piece of evidence to retrieve. Calling it a
+``probability distribution over tokens'' is technically correct but misleading ---
+the weights are routing coefficients, not posterior beliefs.
+
+\subsection*{Softmax 2: The FFN Sigmoid (Inference)}
+
+The second softmax is the sigmoid activation in the FFN. Its job is Bayesian
+inference: what is my updated belief given my neighbors' beliefs?
+\[
+\updateBelief(m_0, m_1) = \sigma\!\left(\logit(m_0) + \logit(m_1)\right).
+\]
+This is where the actual Bayesian computation happens. The sigmoid is the exact
+inverse of logit, converting the log-odds sum back to a probability. This is the
+weight-of-evidence combination of Turing and Good~\cite{good1950probability},
+applied to two binary evidence sources.
+
+This softmax \emph{is} computing a posterior. The output is a belief in $(0,1)$
+representing the updated probability that the current proposition is true, given
+the gathered evidence. This is the inference step. Everything else in the
+transformer is infrastructure for getting the right inputs to this computation.
+
+\subsection*{Softmax 3: Output (Generation)}
+
+The third softmax appears at the output layer, applied to the logits over the
+vocabulary. Its job is generation: which token comes next? In a standard language
+model, the logits are computed by a matrix multiply over the final hidden state ---
+pattern-matched association rather than computed inference.
+
+In a grounded QBBN transformer, the output would be different: the logits would come
+from computed BP posteriors, representing the marginal probability of each
+proposition being true given the evidence. The softmax operation is the same; what
+changes is what it is applied to.
+
+The QBBN does not replace the softmax. It replaces the logits. The architecture was
+always capable of computing exact posteriors; it just needed the right weights to
+feed into the output softmax. Standard language model training produces weights that
+implement pattern-matched association. BP training would produce weights that
+implement principled inference.
+
+\subsection*{Why the Distinction Matters}
+
+Conflating Softmax~1 and Softmax~2 leads to the mistaken conclusion that the
+attention weights are the inference. They are not. The attention weights determine
+\emph{which} evidence to gather. The FFN sigmoid determines \emph{what to conclude}
+from that evidence. Routing and inference are separate computations, performed by
+separate components, in a strict temporal order enforced by the architecture.
+
+Conflating Softmax~2 and Softmax~3 leads to the mistaken conclusion that the output
+distribution is a posterior over propositions. In an ungrounded model, it is not ---
+it is a distribution over next tokens learned by association. The two converge only
+in a grounded model where every output token corresponds to a declared proposition
+with a known prior.

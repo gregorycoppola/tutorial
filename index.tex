@@ -1,0 +1,91 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{booktabs}
+
+\geometry{margin=1.2in}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+\DeclareMathOperator{\logit}{logit}
+\newcommand{\updateBelief}{\mathrm{updateBelief}}
+\newcommand{\R}{\mathbb{R}}
+
+\title{Finding the Bayes Net in the Transformer:\\
+A Tutorial on Message Passing, Belief Propagation, and Transformer Circuits}
+\author{Greg Coppola\\
+\small coppola.ai \quad greg@coppola.ai}
+\date{2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+A growing body of work suggests that transformer computation can be
+understood through the lens of probabilistic message passing. This paper
+is a tutorial introduction to that perspective. Using the formally
+verified result that sigmoid transformers can exactly realize belief
+propagation~\cite{coppola2026transformers} as an organizing center, we
+walk through the transformer architecture component by component:
+residual streams as evolving belief states, attention as evidence
+routing, feed-forward networks as belief updates, and layers as rounds
+of message passing.
+
+The goal is not to argue that all prior work is secretly ``the same
+thing,'' nor to claim that every transformer literally instantiates an
+exact Bayesian network in every detail. Rather, the goal is to provide a
+common vocabulary for understanding why several previously separate
+research programs --- graphical models, mechanistic interpretability,
+Bayesian accounts of in-context learning, graph neural networks, and
+distributed representations --- repeatedly converge on similar
+structures.
+
+Along the way, we develop the underlying log-odds algebra of Turing,
+Good, and Pearl, discuss grounding and hallucination through the lens of
+verification and ontology, and survey empirical findings from
+interpretability research that naturally fit the message-passing view.
+The companion paper~\cite{coppola2026transformers} develops the formal
+constructive theorems; this paper is intended as a conceptual and
+mechanistic guide to the broader picture.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\part{The Mathematical Foundation}
+\input{ch00-introduction}
+\input{ch10-log-odds-algebra}
+\input{ch03b-turing-complete}
+
+\part{The Five Correspondences}
+\input{ch01-residual-stream}
+\input{ch02-attention-and-gate}
+\input{ch03-ffn-or-gate}
+\input{ch04-layers-rounds-of-bp}
+\input{ch05-scaling-numbers}
+
+\part{Going Deeper}
+\input{ch06-residual-stream-vs-propositions}
+\input{ch08-three-softmaxes}
+\input{ch12-or-nodes-vs-dimensions}
+\input{ch11-how-to-read-weights}
+\input{ch07c-hybrid-bp}
+
+\part{Grounding and Hallucination}
+\input{ch09-grounded-vs-ungrounded}
+
+\part{Convergent Evidence}
+\input{ch07-evidence-from-interp}
+\input{ch13-related-work}
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}

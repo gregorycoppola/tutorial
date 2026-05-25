@@ -1,0 +1,74 @@
+\section{The Residual Stream as the Belief State}
+\label{sec:residual-stream}
+
+The starting point for seeing the Bayes net in the transformer is the residual
+stream. Everything else follows from getting this right.
+
+In the standard transformer encoder, each token position carries a vector of
+dimension $D_{\mathrm{model}}$ that persists across all layers. Each layer reads
+from this vector and writes its output back into it via a residual connection.
+Nothing is discarded; the stream accumulates. Elhage et al.~\cite{elhage2021mathematical}
+name this the \emph{residual stream} and frame it as a shared workspace: attention
+heads and feed-forward layers are read-write operations on a common scratchpad.
+
+In the Bayes net view, the residual stream at token position $t$ is the
+\emph{belief state} of factor graph node $t$. Specifically, the formal token
+encoding from~\cite{coppola2026transformers} assigns clean semantic roles to each
+dimension:
+
+\begin{center}
+\begin{tabular}{cl}
+\toprule
+Dimensions & Content \\
+\midrule
+0 & own belief (initialized to $0.5$) \\
+1--4 & factor table entries $[f_{00}, f_{01}, f_{10}, f_{11}]$ \\
+5 & node type (0 = variable, 1 = factor) \\
+6 & own index $/ (n-1)$ \\
+7 & neighbor index $/ (n-1)$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Dimensions 5--7 form the \emph{routing key}: the complete inferential identity of
+the token. Dimensions 0--4 are continuous parameters: they supply the magnitudes
+the inference computes over, but they do not determine the structure of the
+computation. This split is not a convenience of presentation --- it is a theorem.
+Two tokens with the same routing key receive identical attention patterns
+regardless of their continuous parameters~\cite{coppola2026transformers}.
+
+\subsection*{Routing Key = Concept. Continuous Dimensions = Magnitude.}
+
+This is the right level of abstraction for thinking about what the residual stream
+represents. The routing key identifies \emph{which} concept a token corresponds to.
+The continuous dimensions encode \emph{how strongly} the evidence supports that
+concept. A production transformer with $D_{\mathrm{model}} = 4096$ is not tracking
+4096 independent propositions --- it is tracking a much smaller number of concepts
+(bounded by the routing key space) while using the remaining dimensions to encode
+magnitudes and handle superposition.
+
+The residual connection is what makes this interpretation coherent across layers.
+Belief propagation is an iterative algorithm: each round refines the belief at every
+node by incorporating messages from neighbors. The residual connection ensures that
+each layer's update is added to the accumulated belief, not computed from scratch.
+Layer $l$ does not replace the belief; it refines it.
+
+\subsection*{What This Looks Like in Trained Models}
+
+The mechanistic interpretability literature has independently converged on a
+compatible picture. Elhage et al.~\cite{elhage2022superposition} show that the
+residual stream represents far more features than $D_{\mathrm{model}}$ dimensions
+via superposition: features are encoded as nearly-orthogonal directions in a
+high-dimensional space, with interference managed by sparsity. In the Bayes net
+view, this means the residual stream is simultaneously tracking many factor graph
+nodes, each encoded as a direction rather than a dedicated dimension.
+
+Sparse autoencoder (SAE) features~\cite{templeton2024monosemanticity} are the
+natural candidates for individual factor graph nodes. A monosemantic SAE feature ---
+one that activates for a single coherent concept --- corresponds to a single routing
+key in the formal construction. The feature direction in residual stream space is
+where the belief value for that concept lives.
+
+The broader implication: the residual stream is not a flat representation. It has
+structure --- routing structure, imposed by the attention weights, that determines
+which features interact with which. That structure is the implicit factor graph.

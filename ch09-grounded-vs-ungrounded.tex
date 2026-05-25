@@ -1,0 +1,121 @@
+\section{Grounded vs.\ Ungrounded Transformers}
+\label{sec:grounded-ungrounded}
+
+A grounded transformer and a standard language model may share the same
+underlying architecture while differing substantially in how their
+internal representations relate to externally defined concepts and
+verification procedures.
+
+Within the BP interpretation developed in this paper, both grounded and
+ungrounded systems perform inference over implicit factor-graph-like
+structures. The key distinction is whether the graph has a formally
+declared interpretation.
+
+\subsection*{The Distinction}
+
+A \emph{grounded} transformer has:
+
+\begin{itemize}
+\item An explicit factor graph: tokens or latent states correspond to
+declared propositions in a known knowledge base.
+
+\item A finite concept space: the relevant propositions are bounded and
+specified in advance.
+
+\item A verifier: outputs can be checked against externally defined
+correctness criteria.
+
+\item Formal guarantees in restricted settings: on tree-structured
+knowledge bases with constructive BP weights, exact posterior guarantees
+follow from the companion theorem~\cite{coppola2026transformers}.
+\end{itemize}
+
+An \emph{ungrounded} transformer has:
+
+\begin{itemize}
+\item An implicit factor graph encoded in learned parameters rather than
+explicitly declared structures.
+
+\item No formally declared ontology tying internal states to a finite,
+verified concept inventory.
+
+\item No architecture-internal correctness guarantee analogous to the
+grounded setting.
+
+\item Reliability that is primarily empirical rather than formally
+verified.
+\end{itemize}
+
+\subsection*{Hallucination in BP Terms}
+
+Within this framework, hallucination can be interpreted as a mismatch
+between model beliefs and externally verified posteriors.
+
+For grounded systems, the comparison is well-defined:
+\[
+b(j) \neq P_{\mathrm{true}}(j),
+\]
+where $P_{\mathrm{true}}(j)$ is the correct posterior induced by the
+knowledge base and observed evidence.
+
+Ungrounded language models differ because they lack a formally declared
+ontology and verifier. Their outputs may still correspond to meaningful
+or true propositions in ordinary semantic practice, but the architecture
+does not itself provide a mechanism guaranteeing correctness relative to
+a fixed external knowledge base.
+
+From this perspective, hallucination is not merely a numerical error in
+the inference procedure. It is also a consequence of operating without a
+fully specified and verifiable grounding structure.
+
+\subsection*{Scaling and Grounding}
+
+Scaling improves empirical performance. Larger models generally produce
+more coherent outputs, achieve lower hallucination rates on benchmarks,
+and exhibit richer internal representations.
+
+However, scaling alone does not provide the same kind of formal
+correctness guarantees available in grounded settings. Increasing model
+capacity improves the quality of the learned implicit factor graph, but
+it does not by itself create an explicit ontology, verifier, or formally
+grounded concept space.
+
+The distinction is therefore not between ``working'' and ``non-working''
+systems. It is between empirical reliability and formally specified
+correctness guarantees.
+
+\subsection*{What Grounding Would Look Like}
+
+A fully grounded transformer system would require several components:
+
+\begin{enumerate}
+\item A declared concept space: propositions or entities are explicitly
+represented and bounded.
+
+\item A declared relational structure: dependencies between concepts are
+specified or verified.
+
+\item A grounding procedure: natural language inputs are mapped into the
+declared representational system.
+
+\item A verification mechanism: outputs can be checked against the
+underlying ontology or knowledge base.
+\end{enumerate}
+
+Retrieval-augmented generation (RAG) can be viewed as a partial form of
+grounding because retrieved documents temporarily constrain the inference
+space. More complete grounding would require persistent ontological and
+verification structure rather than transient context retrieval alone.
+
+\subsection*{The Practical Implication}
+
+The practical distinction between grounded and ungrounded systems is the
+kind of reliability guarantee they support.
+
+For grounded systems in restricted settings, the constructive BP results
+yield exact posterior guarantees. For general-purpose language models,
+the strongest guarantees are typically empirical: benchmark performance,
+human evaluation, calibration studies, or retrieval consistency.
+
+The gap between these two forms of reliability --- formal verification
+versus empirical robustness --- is the grounding gap.

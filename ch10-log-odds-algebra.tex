@@ -1,0 +1,77 @@
+\section{The Log-Odds Algebra}
+\label{sec:log-odds}
+
+The mathematical spine of the entire account is a single algebraic structure: the group of beliefs on $(0,1)$ under log-odds addition. This algebra was discovered three times independently, in three different contexts, by three different research traditions. Each time, the same formula emerged.
+
+\subsection*{First Discovery: Turing and Good at Bletchley Park}
+
+During World War II, Alan Turing and I.J.\ Good needed a practical method for combining independent pieces of evidence when breaking Enigma. The method they developed was log-odds addition~\cite{good1950probability}.
+
+Given a binary hypothesis $H$ and independent evidence sources $e_0, e_1$, the weight of evidence adds:
+\[
+\logit(P(H \mid e_0, e_1)) = \logit(P(H)) + W(H : e_0) + W(H : e_1).
+\]
+Starting from a uniform prior $P(H) = 0.5$, so $\logit(P(H)) = 0$, and setting $m_i = P(H \mid e_i)$:
+\[
+\logit(P(H \mid e_0, e_1)) = \logit(m_0) + \logit(m_1).
+\]
+Converting back via sigmoid: $P(H \mid e_0, e_1) = \sigma(\logit(m_0) + \logit(m_1)) = \updateBelief(m_0, m_1)$.
+
+The updateBelief function is Turing and Good's weight-of-evidence combination, applied to two binary evidence sources. It is not an approximation. For independent evidence sources, it is exact.
+
+\subsection*{Second Discovery: Pearl's Sum-Product Algorithm}
+
+Pearl~\cite{pearl1988probabilistic} derived the belief propagation update rule for binary variable nodes from the general sum-product equations applied to pairwise factors with independent messages. The result is:
+\[
+b_{\mathrm{new}}(v) = \frac{m_0 m_1}{m_0 m_1 + (1-m_0)(1-m_1)} = \sigma(\logit(m_0) + \logit(m_1)).
+\]
+Pearl derived this from the structure of graphical models. He did not frame it as log-odds addition or connect it to Turing and Good's weight-of-evidence tradition. The formula is the same. The framing is new.
+
+Pearl's deeper contribution was showing that this update rule, applied
+locally at each node using only messages from immediate neighbors, is
+sufficient to compute exact marginal posteriors on tree-structured
+graphs~\cite{pearl1988probabilistic}. Global inference emerges from
+local computation. No central coordinator is needed: each node updates
+its belief from its neighbors' current beliefs, and iterating this
+process to convergence yields the exact answer. This is the
+sum-product algorithm, and it is what makes the connection to
+transformers non-trivial. A transformer is also a distributed
+computation in which each position updates from its neighbors across
+layers, with no global state outside the residual stream. The
+architectural parallel is not incidental --- it is the reason the same
+formula appears in both systems.
+
+\subsection*{Third Discovery: The Sigmoid Transformer}
+
+The sigmoid FFN computing $\sigma(w_0 \cdot \logit(m_0) + w_1 \cdot \logit(m_1) + b)$ is performing weighted log-odds addition and converting back to probability space in a single operation. With $w_0 = w_1 = 1$ and $b = 0$, this is $\updateBelief$ exactly. The sigmoid activation is not a design choice motivated by gradient flow or output normalization. It is the exact function required to implement the Turing-Good-Pearl algebra.
+
+\subsection*{The Algebraic Structure}
+
+Log-odds addition defines a commutative group on $(0,1)$ via the isomorphism $\logit : (0,1) \to \mathbb{R}$:
+\[
+m_0 \oplus m_1 = \sigma(\logit(m_0) + \logit(m_1)).
+\]
+
+\begin{itemize}
+\item \textbf{Commutativity:} $m_0 \oplus m_1 = m_1 \oplus m_0$.
+\item \textbf{Associativity:} $(m_0 \oplus m_1) \oplus m_2 = m_0 \oplus (m_1 \oplus m_2)$.
+\item \textbf{Identity:} $m \oplus 0.5 = m$, since $\logit(0.5) = 0$.
+\item \textbf{Inverse:} $m \oplus (1-m) = 0.5$, since $\logit(m) + \logit(1-m) = 0$.
+\end{itemize}
+
+The identity element is $0.5$ --- maximum uncertainty, no information. Combining any belief with a $0.5$ belief leaves it unchanged. This is the formal statement that a neutral prior contributes nothing.
+
+\subsection*{Relation to Classical Boolean Logic}
+
+This algebra is the probabilistic generalization of classical Boolean AND and OR. In the limit as beliefs approach 0 and 1:
+\begin{itemize}
+\item $\logit(1) = +\infty$ (certain true), $\logit(0) = -\infty$ (certain false).
+\item Two large positive numbers sum to a larger positive number: high confidence in both inputs yields high confidence in their conjunction.
+\item Equal and opposite evidence cancels: $\logit(p) + \logit(1-p) = 0$, yielding $0.5$ --- maximum uncertainty.
+\end{itemize}
+
+Classical Boolean logic is the limiting case as beliefs become certain. The log-odds algebra does not have an annihilator (FALSE AND TRUE $\neq$ FALSE in the probabilistic case); instead it has cancellation: strong evidence in opposite directions yields maximum uncertainty. This is the correct behavior for uncertain reasoning.
+
+\subsection*{Why This Matters}
+
+The three independent rediscoveries of the same formula are not a coincidence. The log-odds algebra is the unique correct way to combine independent binary evidence under the axioms of probability theory. Any system that does probabilistic reasoning over binary propositions with independent evidence sources will converge on this algebra. The transformer converged on it because it was trained to do probabilistic reasoning. Gradient descent did not discover something new. It rediscovered the structure that the analysis of reasoning already required.
