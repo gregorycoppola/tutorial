@@ -18,7 +18,8 @@
 \newcommand{\R}{\mathbb{R}}
 
 \title{Finding the Bayes Net in the Transformer:\\
-A Tutorial on Message Passing, Belief Propagation, and Transformer Circuits}
+A Tutorial on Message Passing, Belief Propagation,
+and Transformer Circuits}
 \author{Greg Coppola\\
 \small coppola.ai \quad greg@coppola.ai}
 \date{2026}
@@ -28,32 +29,28 @@ A Tutorial on Message Passing, Belief Propagation, and Transformer Circuits}
 \maketitle
 
 \begin{abstract}
-A growing body of work suggests that transformer computation can be
-understood through the lens of probabilistic message passing. This paper
-is a tutorial introduction to that perspective. Using the formally
-verified result that sigmoid transformers can exactly realize belief
-propagation~\cite{coppola2026transformers} as an organizing center, we
-walk through the transformer architecture component by component:
+A sigmoid transformer can exactly realize belief propagation
+computations. This is not a loose analogy or a high-level
+functional similarity: under the constructive mapping proved in the
+companion paper~\cite{coppola2026transformers}, the transformer
+forward pass implements the BP update equations directly. This paper
+is a tutorial guide to what that result means, how it connects to
+transformer components, and what it implies for understanding trained
+models.
+
+We walk through the transformer architecture component by component:
 residual streams as evolving belief states, attention as evidence
-routing, feed-forward networks as belief updates, and layers as rounds
-of message passing.
+routing, feed-forward networks as belief updates, and layers as
+rounds of message passing. We develop the underlying log-odds algebra
+of Turing, Good, and Pearl --- the mathematical spine connecting all
+three --- and show that five independent research programs in graphical
+models, mechanistic interpretability, in-context learning, graph
+neural networks, and constructive weight proofs have converged on the
+same picture from different starting points.
 
-The goal is not to argue that all prior work is secretly ``the same
-thing,'' nor to claim that every transformer literally instantiates an
-exact Bayesian network in every detail. Rather, the goal is to provide a
-common vocabulary for understanding why several previously separate
-research programs --- graphical models, mechanistic interpretability,
-Bayesian accounts of in-context learning, graph neural networks, and
-distributed representations --- repeatedly converge on similar
-structures.
-
-Along the way, we develop the underlying log-odds algebra of Turing,
-Good, and Pearl, discuss grounding and hallucination through the lens of
-verification and ontology, and survey empirical findings from
-interpretability research that naturally fit the message-passing view.
 The companion paper~\cite{coppola2026transformers} develops the formal
-constructive theorems; this paper is intended as a conceptual and
-mechanistic guide to the broader picture.
+constructive theorems. This paper is the conceptual and mechanistic
+guide to the broader picture those theorems open up.
 \end{abstract}
 
 \tableofcontents
