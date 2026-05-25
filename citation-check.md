@@ -19,6 +19,8 @@
 | `shai2024belief` | ✓ verified | 2405.15943 | Transformers Represent Belief State Geometry in their Residual Stream |
 | `piotrowski2025constrained` | ✓ verified | 2502.01954 | Constrained Belief Updates Explain Geometric Structures in Transformer Represent |
 | `agarwal2025bayesian` | ✓ verified | 2512.22471 | The Bayesian Geometry of Transformer Attention |
+| `agarwal2025gradient` | ✓ verified | 2512.22473 | Gradient Dynamics of Attention: How Cross-Entropy Sculpts Bayesian Manifolds |
+| `agarwal2025geometric` | ✓ verified | 2512.23752 | Geometric Scaling of Bayesian Inference in LLMs |
 | `xie2022icl` | ✓ verified | 2111.02080 | An Explanation of In-Context Learning as Implicit Bayesian Inference |
 | `akyurek2023icl` | ✓ verified | 2211.15661 | What Learning Algorithm is In-Context Learning? Investigations with Linear Model |
 | `oswald2023gradient` | ✓ verified | 2212.07677 | Transformers Learn In-Context by Gradient Descent |
@@ -27,6 +29,7 @@
 | `yoon2019gnn` | ✓ trusted |  | Inference in Probabilistic Graphical Models by Graph Neural Networks |
 | `joshi2020gnn` | ✓ trusted |  | Transformers are Graph Neural Networks |
 | `perez2021turing` | ✓ trusted |  | On the Turing Completeness of Modern Neural Networks |
+| `giannou2023looped` | ✓ verified | 2301.13379 | Looped Transformers as Programmable Computers |
 | `yedidia2003bp` | ✓ trusted |  | Understanding Belief Propagation and its Generalizations |
 
 All citations verified or trusted.
